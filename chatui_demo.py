@@ -4,9 +4,8 @@ from time import sleep
 
 with ChatUI() as ui:
     def do_output():
-        while not ui.is_exiting():
+        while not ui.wait_for_exiting(timeout = 2):
             ui.add_output("Hello")
-            sleep(2)
     def do_input():
         while not ui.is_exiting():
             line = ui.get_input()

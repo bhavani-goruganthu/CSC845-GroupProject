@@ -1,6 +1,7 @@
 from queue import Queue
 from threading import Thread, Event
 import platform
+import time
 
 class ChatUI:
 
@@ -19,6 +20,7 @@ class ChatUI:
         self.io.__enter__()
         Thread(target = self.__input_thread).start()
         Thread(target = self.__output_thread).start()
+        Thread(target = self.__cursor_thread).start()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -28,7 +30,7 @@ class ChatUI:
     def __input_thread(self):
         line = ""
         while True:
-            self.output_queue.put(('input', '> ' + line))
+            self.output_queue.put(('input', line))
             c = self.io.getch()
             if ' ' <= c and c <= '~':
                 line += c
@@ -45,19 +47,28 @@ class ChatUI:
 
     def __output_thread(self):
         last_line = ""
+        cursor = ""
         while True:
+            self.io.write("\r" + self.__format_line("> " + last_line + cursor))
             command = self.output_queue.get()
             op = command[0]
             if op == 'input':
                 last_line = command[1]
-                self.io.write("\r" + self.__format_line(last_line))
             elif op == 'output':
                 line = command[1]
-                self.io.write("\r" + self.__format_line(line) + "\r\n" +
-                    self.__format_line(last_line))
+                self.io.write("\r" + self.__format_line(line) + "\n")
+            elif op == 'cursor':
+                cursor = command[1]
             else:
-                self.io.write("\r\n")
+                self.io.write("\r" + self.__format_line("> " + last_line) + "\r\n")
                 return
+
+    def __cursor_thread(self):
+        while not self.exiting.is_set():
+            self.exiting.wait(0.5)
+            self.output_queue.put(('cursor', '_'))
+            self.exiting.wait(0.5)
+            self.output_queue.put(('cursor', ''))
 
     def __format_line(self, line):
         max_length = self.io.columns() - 1
