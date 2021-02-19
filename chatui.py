@@ -32,14 +32,16 @@ class ChatUI:
         while True:
             self.output_queue.put(('input', line))
             c = self.io.getch()
-            if ' ' <= c and c <= '~':
+            if '\x20' <= c and c <= '\x7E': # printable
                 line += c
-            elif c == '\r':
+            elif c == '\x0D': # CR
                 self.input_queue.put(line)
                 line = ""
-            elif c == '\b' or c == '\x7F':
+            elif c == '\x1B': # ESC
+                line = ""
+            elif c == '\x08' or c == '\x7F': # BS or DEL
                 line = line[:-1]
-            elif c == '\x03' or c == '\x04':
+            elif c == '\x03' or c == '\x04' or c == '\x1A': # ^C, ^D, or ^Z
                 self.exiting.set()
                 self.input_queue.put(None)
                 self.output_queue.put(('exiting'))
@@ -47,35 +49,42 @@ class ChatUI:
 
     def __output_thread(self):
         last_line = ""
-        cursor = ""
+        cursor = False
         while True:
-            self.io.write("\r" + self.__format_line("> " + last_line + cursor))
+            self.io.write("\r" + self.__format_input(last_line, cursor))
             command = self.output_queue.get()
             op = command[0]
             if op == 'input':
                 last_line = command[1]
             elif op == 'output':
                 line = command[1]
-                self.io.write("\r" + self.__format_line(line) + "\n")
+                self.io.write("\r" + self.__format_output(line) + "\n")
             elif op == 'cursor':
                 cursor = command[1]
             else:
-                self.io.write("\r" + self.__format_line("> " + last_line) + "\r\n")
+                self.io.write("\r" + self.__format_input(last_line, False) + "\r\n")
                 return
 
     def __cursor_thread(self):
         while not self.exiting.is_set():
             self.exiting.wait(0.5)
-            self.output_queue.put(('cursor', '_'))
+            self.output_queue.put(('cursor', True))
             self.exiting.wait(0.5)
-            self.output_queue.put(('cursor', ''))
+            self.output_queue.put(('cursor', False))
 
-    def __format_line(self, line):
+    def __format_input(self, line, cursor):
         max_length = self.io.columns() - 1
         length = len(line)
-        if length == max_length:
-            return line
-        elif length > max_length:
+        cursor_char = (' ', '_')[cursor]
+        if length + 3 > max_length:
+            return ">+" + line[(length + 3) - max_length:] + cursor_char
+        else:
+            return "> " + line + cursor_char + " " * (max_length - (length + 3))
+
+    def __format_output(self, line):
+        max_length = self.io.columns() - 1
+        length = len(line)
+        if length > max_length:
             return line[:max_length - 3] + "..."
         else:
             return line + " " * (max_length - length)
