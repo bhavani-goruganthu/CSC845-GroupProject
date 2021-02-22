@@ -8,17 +8,11 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # connect to the host and port the server socket is on
 client.connect((HOST, PORT))
 
-name = input("Enter your Name: ")
-client.sendall(bytes(name, 'utf-8'))
-
-# receive data from the server
-msg= client.recv(1024)  # buffer size
-print(msg.decode("utf-8")) # specify encoding
-
+print("Enter Something: ")
 message = input(" -> ")  # take input
 while message.lower().strip() != 'bye':
     client.send(message.encode())  # send message
-    data = client.recv(1024).decode()  # receive response
+    data = client.recv(255).decode()  # receive response
     print('Received from Server: ' + data)  # show in terminal
     message = input(" -> ")  # again take input
     # print(message.lower().strip())
