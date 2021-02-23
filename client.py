@@ -11,8 +11,12 @@ client.connect((HOST, PORT))
 print("Enter Something: ")
 message = input(" -> ")  # take input
 while message.lower().strip() != 'bye':
-    client.send(message.encode())  # send message
-    data = client.recv(255).decode()  # receive response
+    enc_msg = message.encode('utf-8')
+    len_encmsg = str(len(enc_msg)).encode('utf-8')
+    print(len_encmsg)
+    enc_msg = len_encmsg + enc_msg
+    client.sendall(enc_msg)  # send message
+    data = client.recv(255).decode('utf-8')  # receive response
     print('Received from Server: ' + data)  # show in terminal
     message = input(" -> ")  # again take input
     # print(message.lower().strip())

@@ -18,12 +18,12 @@ while True:
         print(f"Connection successful! Address: {address}")
         while True:
             # receive data stream
-            data = connection.recv(255).decode()
+            data = connection.recv(255).decode('utf-8')
             if not data:
                 # if data is not received break
                 break
             print("From connected User: " + str(data))
-            connection.send(data.encode())  # echo the same message to the client
+            connection.sendall(data.encode())  # echo the same message to the client
         connection.close(); server.close();break
     except KeyboardInterrupt:
         print(f"closing connection to {address}.")
