@@ -26,7 +26,7 @@ while True:
             connection.sendall(data.encode('utf-8'))  # echo the same message to the client
         connection.close(); server.close();break
     except KeyboardInterrupt:
-        print(f"closing connection to {address}.")
+        print(f"Closing connection to {address}.")
         connection.shutdown(socket.SHUT_RDWR)
         connection.close()
         sys.exit()
