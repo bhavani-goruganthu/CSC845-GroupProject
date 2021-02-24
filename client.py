@@ -12,12 +12,13 @@ print("Enter Something: ")
 message = input(" -> ")  # take input
 while message.lower().strip() != 'bye':
     enc_msg = message.encode('utf-8')
-    len_encmsg = str(len(enc_msg)).encode('utf-8')
+    len_encmsg = bin(len(enc_msg))
+    len_encmsg = len_encmsg.encode('utf-8')
     print(len_encmsg)
     enc_msg = len_encmsg + enc_msg
     client.sendall(enc_msg)  # send message
     data = client.recv(255).decode('utf-8')  # receive response
-    print('Received from Server: ' + data)  # show in terminal
+    print('Received from Server: ' + str(data))  # show in terminal
     message = input(" -> ")  # again take input
     # print(message.lower().strip())
 client.close()

@@ -23,7 +23,7 @@ while True:
                 # if data is not received break
                 break
             print("From connected User: " + str(data))
-            connection.sendall(data.encode())  # echo the same message to the client
+            connection.sendall(data.encode('utf-8'))  # echo the same message to the client
         connection.close(); server.close();break
     except KeyboardInterrupt:
         print(f"closing connection to {address}.")
