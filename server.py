@@ -17,11 +17,10 @@ while True:
         connection, address = server.accept() # establish connection
         print(f"Connection successful! Address: {address}")
         while True:
-            # receive data stream
-            data = connection.recv(255).decode('utf-8')
+            data_len = int.from_bytes(connection.recv(1), "big") # receive data stream
+            data = connection.recv(data_len).decode('utf-8')
             if not data:
-                # if data is not received break
-                break
+                break # if data is not received break
             print("From connected User: " + str(data))
             connection.sendall(data.encode('utf-8'))  # echo the same message to the client
         connection.close(); server.close();break
