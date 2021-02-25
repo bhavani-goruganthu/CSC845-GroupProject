@@ -15,11 +15,12 @@ while True:
         while message.lower().strip() != 'bye':
             enc_msg = message.encode('utf-8')
             len_encmsg = len(enc_msg)
-            if len_encmsg < 255:
+            if len_encmsg <= 255:
                 len_encmsg = len_encmsg.to_bytes(1,"big")
                 enc_msg = len_encmsg + enc_msg
                 client.sendall(enc_msg)  # send message
-                data = client.recv(255).decode('utf-8')  # receive response
+                data_len = int.from_bytes(client.recv(1),"big")
+                data = client.recv(data_len, socket.MSG_WAITALL).decode('utf-8')  # receive response
                 print('Received from Server: ' + str(data))  # show in terminal
                 message = input(" -> ")  # again take input
             else:

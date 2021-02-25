@@ -14,15 +14,19 @@ print('Waiting for Connection')
 
 while True:
     try:
-        connection, address = server.accept() # establish connection
+        connection, address = server.accept() # establish connection, blocking call, waits until there is a connection
         print(f"Connection successful! Address: {address}")
         while True:
             data_len = int.from_bytes(connection.recv(1), "big") # receive data stream
-            data = connection.recv(data_len).decode('utf-8')
+            data = connection.recv(data_len, socket.MSG_WAITALL).decode('utf-8')
             if not data:
                 break # if data is not received break
             print("From connected User: " + str(data))
-            connection.sendall(data.encode('utf-8'))  # echo the same message to the client
+            enc_data = data.encode('utf-8')
+            len_encdata = len(enc_data) # or can use data_len
+            len_encdata = len_encdata.to_bytes(1,"big")
+            enc_data = len_encdata + enc_data
+            connection.sendall(enc_data)  # echo the same message to the client
         connection.close(); server.close();break
     except KeyboardInterrupt:
         print(f"Closing connection to {address}.")
