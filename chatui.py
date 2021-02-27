@@ -43,7 +43,9 @@ class ChatUI:
             if 0x20 <= c and c <= 0x7E: # printable
                 line += chr(c)
             elif c == 0x0D: # CR
-                self.input_queue.put(line)
+                line = line.strip()
+                if line != "":
+                    self.input_queue.put(line)
                 line = ""
             elif c == 0x1B: # ESC
                 line = ""
@@ -89,12 +91,36 @@ class ChatUI:
             return "> " + line + cursor_char + " " * (max_length - (length + 3))
 
     def __format_output(self, line):
-        max_length = self.io.columns() - 1
-        length = len(line)
-        if length > max_length:
-            return line[:max_length - 3] + "..."
-        else:
-            return line + " " * (max_length - length)
+        max_length = self.io.columns() - 3
+        words = line.split()
+        formatted_lines = []
+        formatted_line = ['*']
+        length = 0
+        while len(words) > 0:
+            word = words[0]
+            if length == 0:
+                if len(word) > max_length:
+                    formatted_line.append(word[:max_length])
+                    length = max_length
+                    words[0] = word[max_length:]
+                else:
+                    formatted_line.append(word)
+                    length = len(word)
+                    words.pop(0)
+            elif length + 1 + len(word) > max_length:
+                if length < max_length:
+                    formatted_line.append(" " * (max_length - length - 1))
+                formatted_lines.append(formatted_line)
+                formatted_line = [' ']
+                length = 0
+            else:
+                formatted_line.append(word)
+                length += 1 + len(word)
+                words.pop(0)
+        if length < max_length:
+            formatted_line.append(" " * (max_length - length - 1))
+        formatted_lines.append(formatted_line)
+        return "\r\n".join([" ".join(words) for words in formatted_lines])
 
     def get_input(self, block = True, timeout = None):
         """Read one line of input from the user. Returns None if the user exits."""
