@@ -13,38 +13,44 @@ class ChatUI:
             from posixio import PosixIO
             self.io = PosixIO()
         self.exiting = Event()
+        self.exited = Event()
         self.input_queue = Queue()
         self.output_queue = Queue()
 
     def __enter__(self):
         self.io.__enter__()
-        Thread(target = self.__input_thread).start()
-        Thread(target = self.__output_thread).start()
-        Thread(target = self.__cursor_thread).start()
+        Thread(target = self.__input_thread, daemon = True).start()
+        Thread(target = self.__output_thread, daemon = True).start()
+        Thread(target = self.__cursor_thread, daemon = True).start()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.__send_exit_signals()
+        self.exited.wait()
         self.io.__exit__(exc_type, exc_value, traceback)
         return False
+
+    def __send_exit_signals(self):
+        self.exiting.set()
+        self.input_queue.put(None)
+        self.output_queue.put(('exiting'))
 
     def __input_thread(self):
         line = ""
         while True:
             self.output_queue.put(('input', line))
             c = self.io.getch()
-            if '\x20' <= c and c <= '\x7E': # printable
-                line += c
-            elif c == '\x0D': # CR
+            if 0x20 <= c and c <= 0x7E: # printable
+                line += chr(c)
+            elif c == 0x0D: # CR
                 self.input_queue.put(line)
                 line = ""
-            elif c == '\x1B': # ESC
+            elif c == 0x1B: # ESC
                 line = ""
-            elif c == '\x08' or c == '\x7F': # BS or DEL
+            elif c == 0x08 or c == 0x7F: # BS or DEL
                 line = line[:-1]
-            elif c == '\x03' or c == '\x04' or c == '\x1A': # ^C, ^D, or ^Z
-                self.exiting.set()
-                self.input_queue.put(None)
-                self.output_queue.put(('exiting'))
+            elif c == 0x03 or c == 0x04 or c == 0x1A: # ^C, ^D, or ^Z
+                self.__send_exit_signals()
                 return
 
     def __output_thread(self):
@@ -63,6 +69,7 @@ class ChatUI:
                 cursor = command[1]
             else:
                 self.io.write("\r" + self.__format_input(last_line, False) + "\r\n")
+                self.exited.set()
                 return
 
     def __cursor_thread(self):
@@ -90,13 +97,19 @@ class ChatUI:
             return line + " " * (max_length - length)
 
     def get_input(self, block = True, timeout = None):
-        return self.input_queue.get(block, timeout)
+        """Read one line of input from the user. Returns None if the user exits."""
+        return None if self.is_exiting() else self.input_queue.get(block, timeout)
 
     def add_output(self, line):
+        """Displays one line of output to the user."""
         self.output_queue.put(('output', line))
 
     def is_exiting(self):
+        """Returns True or False depending on whether the user has exited
+        the program."""
         return self.exiting.is_set()
 
     def wait_for_exiting(self, timeout = None):
+        """Waits until the user exits or the given timeout has elapsed, and then
+        returns the same as is_exiting()."""
         return self.exiting.wait(timeout)

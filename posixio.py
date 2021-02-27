@@ -19,7 +19,7 @@ class PosixIO:
         return False
 
     def getch(self):
-        return stdin.read(1)
+        return ord(stdin.read(1))
 
     def write(self, s):
         stdout.write(s)

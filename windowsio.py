@@ -11,7 +11,7 @@ class WindowsIO:
         return False
 
     def getch(self):
-        return msvcrt.getch()
+        return ord(msvcrt.getch())
 
     def write(self, s):
         stdout.write(s)
