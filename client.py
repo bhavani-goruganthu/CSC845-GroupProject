@@ -1,5 +1,6 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
+import m1proto
 HOST = sys.argv[1]
 PORT = int(sys.argv[2])
 # create a socket object
@@ -8,24 +9,17 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # connect to the host and port the server socket is on
 client.connect((HOST, PORT))
 
+proto = m1proto.M1Protocol(client)
+
 while True:
     try:
         print("Enter Something: ")
         message = input(" -> ")  # take input
         while message.lower().strip() != 'bye':
-            enc_msg = message.encode('utf-8')
-            len_encmsg = len(enc_msg)
-            if len_encmsg <= 255:
-                len_encmsg = len_encmsg.to_bytes(1,"big")
-                enc_msg = len_encmsg + enc_msg
-                client.sendall(enc_msg)  # send message
-                data_len = int.from_bytes(client.recv(1),"big")
-                data = client.recv(data_len, socket.MSG_WAITALL).decode('utf-8')  # receive response
-                print('Received from Server: ' + str(data))  # show in terminal
-                message = input(" -> ")  # again take input
-            else:
-                print("Character Limit is 255.. Try Again..")
-                message = input(" -> ")  # again take input
+            proto.send(message)
+            response = proto.recv()
+            print('Received from Server: ' + response)  # show in terminal
+            message = input(" -> ")  # again take input
         client.close()
     except KeyboardInterrupt:
         print(f"Closing connection to {HOST}.")
