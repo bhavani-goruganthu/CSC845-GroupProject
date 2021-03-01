@@ -2,88 +2,65 @@
 '''
 To run the code, you would need to follow these steps:
 
-In terminal run run.py server
+In terminal: run.py server
 Open another terminal by clicking on +
 Type the command run.py client
 Enter the text in the client window and see the effect.
 to kill server use ctrl+c
 '''
+
 import argparse, socket
 
-MAX_SIZE_BYTES = 65535  # Mazimum size of a UDP datagram
+
+def recvall(sock, length):
+    # to handle when part of the sent data arrives or none
+    data = b''
+    while len(data) < length:
+        more = sock.recv(length - len(data))
+        if not more:
+            raise EOFError('was expecting %d bytes but only received'
+                           ' %d bytes before the socket closed'
+                           % (length, len(data)))
+        data += more
+    return data
 
 
 def server(port):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    hostname = '127.0.0.1'
-    s.bind((hostname, port))
-    print('Listening at {}'.format(s.getsockname()))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('127.0.0.1', port))
+    sock.listen(1)
+    print('Listening at', sock.getsockname())
     while True:
-        data, client_address = s.recvfrom(MAX_SIZE_BYTES)
-        message = data.decode('ascii')
-        processed_message = message.upper()
-        print('The client at {} says {!r}'.format(client_address, message))
-        data = processed_message.encode('ascii')
-        s.sendto(data, client_address)
+        print('Waiting for a new connection')
+        sc, sockname = sock.accept()
+        print('Connection from', sockname)
+        print('  Socket name:', sc.getsockname())
+        print('  Socket peer:', sc.getpeername())
+        message = recvall(sc, 16)
+        print('  message from client:', repr(message))
+        sc.sendall(b'Goodbye, client!')
+        sc.close()
+        print('  Closing socket')
 
 
 def client(port):
     host = '127.0.0.1'
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    message = input('Input lowercase sentence:')
-    data = message.encode('ascii')
-    s.sendto(data, (host, port))
-    print('The OS assigned the address {} to me'.format(s.getsockname()))
-    data, address = s.recvfrom(MAX_SIZE_BYTES)
-    text = data.decode('ascii')
-    print('The server {} replied with {!r}'.format(address, text))
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((host, port))
+    print('Client has been assigned the socket: ', sock.getsockname())
+    # ensures that all of the data gets sent through a loop that compare transmitted data to the mount of data
+    sock.sendall(b'Greetings, server')
+    reply = recvall(sock, 16)
+    print('Server: ', repr(reply))
+    sock.close()
 
 
 if __name__ == '__main__':
-    funcs = {'client': client, 'server': server}
-    parser = argparse.ArgumentParser(description='UDP client and server')
-    parser.add_argument('functions', choices=funcs, help='client or server')
-    parser.add_argument('-p', metavar='PORT', type=int, default=3000,
-                        help='UDP port (default 3000)')
+    choices = {'client': client, 'server': server}
+    parser = argparse.ArgumentParser(description='Send and receive over TCP')
+    parser.add_argument('role', choices=choices, help='which role to play')
+    parser.add_argument('-p', metavar='PORT', type=int, default=3000, help='TCP port (default 1060)')
     args = parser.parse_args()
-    function = funcs[args.functions]
+    function = choices[args.role]
     function(args.p)
-
-
-def client_improved(port):
-    """ no server other than the one the client connected to can send it messages. The operating system discards any
-    of those messages by default. The main disadvantage of this method is that the client can only be connected to
-    one server at a time. In most real life scenarios, singular applications connect to multiple servers.
-    However, servers can actually spoof their IP addresses and masquerade as the server we expect a reply from. The only way to guarantee
-    that authorized servers are contacting a client is to use encryption """
-    host = '127.0.0.1'
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect((host, port))  # to forbid other addresses from sending packets to the client.
-    message = input('Input lowercase sentence:')
-    data = message.encode('ascii')
-    s.send(data)  # no need to use sendto here
-    print('The OS assigned the address {} to me'.format(s.getsockname()))
-    data, address = s.recv(MAX_SIZE_BYTES)  # no need to use recvfrom with connect as well
-    text = data.decode('ascii')
-    print('The server {} replied with {!r}'.format(address, text))
-
-
-def client_better(port):
-    """A better, though more tedious approach, to handle multiple servers would be to check the return address of
-    each reply against a list of addresses that replies are expected from. """
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    hosts = []
-    while True:
-        host = input('Input host address:')
-        hosts.append((host, port))
-        message = input('Input message to send to server:')
-        data = message.encode('ascii')
-        s.sendto(data, (host, port))
-        print('The OS assigned the address {} to me'.format(s.getsockname()))
-        data, address = s.recvfrom(MAX_SIZE_BYTES)
-        text = data.decode('ascii')
-        if address in hosts:
-            print('The server {} replied with {!r}'.format(address, text))
-            hosts.remove(address)
-        else:
-            print('message {!r} from unexpected host {}!'.format(text, address))
