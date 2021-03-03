@@ -1,5 +1,6 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
+
 HOST = sys.argv[1]
 PORT = int(sys.argv[2])
 # create a socket object
@@ -7,6 +8,7 @@ PORT = int(sys.argv[2])
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # connect to the host and port the server socket is on
 client.connect((HOST, PORT))
+print("Connected to the Server Socket..!!")
 
 while True:
     try:
