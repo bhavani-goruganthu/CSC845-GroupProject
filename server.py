@@ -1,6 +1,7 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
 from _thread import * # to accept multiple client connections
+import m1proto
 
 HOST = sys.argv[1]
 PORT = int(sys.argv[2])
@@ -17,17 +18,13 @@ print('Waiting for Connection')
 server.listen(5) # listen to connections
 
 def client_thread(connection, address):
+    proto = m1proto.M1Protocol(connection)
     while True:
-        data_len = int.from_bytes(connection.recv(1), "big") # receive data stream
-        data = connection.recv(data_len, socket.MSG_WAITALL).decode('utf-8')
-        if not data:
+        data = proto.recv()
+        if data is None:
             break # if data is not received break
         print(f"From connected Client {address}): " + str(data))
-        enc_data = data.encode('utf-8')
-        len_encdata = len(enc_data) # or can use data_len
-        len_encdata = len_encdata.to_bytes(1,"big")
-        enc_data = len_encdata + enc_data # add length to the msg before sending it
-        connection.sendall(enc_data)  # echo the same message to the client        
+        proto.send(data)
     connection.close()
 
 while True:
