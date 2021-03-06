@@ -1,6 +1,6 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
-import m1proto
+from m1proto import M1Protocol
 from chatui import ChatUI
 
 HOST = sys.argv[1]
@@ -12,19 +12,15 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((HOST, PORT))
 print("Connected to the Server Socket..!!")
 
-proto = m1proto.M1Protocol(client)
-
 try:
-    with ChatUI() as ui:
+    with M1Protocol(client) as proto, ChatUI() as ui:
         message = ui.get_input()
         while message != None:
             proto.send(message)
             response = proto.recv()
+            if response == None:
+                break
             ui.add_output(response)
             message = ui.get_input()
 except KeyboardInterrupt:
     pass
-finally:
-    print(f"Closing connection to {HOST}.")
-    client.shutdown(socket.SHUT_RDWR)
-    client.close()

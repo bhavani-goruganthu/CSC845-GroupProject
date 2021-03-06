@@ -35,6 +35,21 @@ class M1ProtocolTests(TestCase):
             proto.send('x' * 256)
         self.assertEqual(socket.fake_data(), b'')
 
+    def test_send_error(self):
+        socket = FakeWritableSocket(0)
+        proto = M1Protocol(socket)
+        self.assertFalse(proto.send('abcde'))
+
+    def test_send_error_after_first_byte(self):
+        socket = FakeWritableSocket(1)
+        proto = M1Protocol(socket)
+        self.assertFalse(proto.send('abcde'))
+
+    def test_send_error_with_partial_paload(self):
+        socket = FakeWritableSocket(3)
+        proto = M1Protocol(socket)
+        self.assertFalse(proto.send('abcde'))
+
     def test_recv_empty(self):
         socket = FakeReadableSocket(b'\0')
         proto = M1Protocol(socket)
@@ -57,5 +72,30 @@ class M1ProtocolTests(TestCase):
 
     def test_recv_end(self):
         socket = FakeReadableSocket(b'')
+        proto = M1Protocol(socket)
+        self.assertIsNone(proto.recv())
+
+    def test_recv_end_after_first_byte(self):
+        socket = FakeReadableSocket(b'\x05')
+        proto = M1Protocol(socket)
+        self.assertIsNone(proto.recv())
+
+    def test_recv_end_with_partial_payload(self):
+        socket = FakeReadableSocket(b'\x05abc')
+        proto = M1Protocol(socket)
+        self.assertIsNone(proto.recv())
+
+    def test_recv_error(self):
+        socket = FakeReadableSocket(b'', True)
+        proto = M1Protocol(socket)
+        self.assertIsNone(proto.recv())
+
+    def test_recv_error_after_first_byte(self):
+        socket = FakeReadableSocket(b'\x05', True)
+        proto = M1Protocol(socket)
+        self.assertIsNone(proto.recv())
+
+    def test_recv_error_with_partial_payload(self):
+        socket = FakeReadableSocket(b'\x05abc', True)
         proto = M1Protocol(socket)
         self.assertIsNone(proto.recv())
