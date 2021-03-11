@@ -24,3 +24,5 @@ try:
             message = ui.get_input()
 except KeyboardInterrupt:
     pass
+finally:
+    client.close()

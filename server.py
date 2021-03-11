@@ -23,9 +23,9 @@ def client_thread(connection, address):
             data = proto.recv()
             if data is None:
                 break # if data is not received break
-            print(f"From connected Client {address}): " + str(data))
-            if not proto.send(data):
-                break
+            print(f"From connected Client {address}: " + str(data))
+            proto.send(data)
+        connection.close()
 
 try:
     while True:
