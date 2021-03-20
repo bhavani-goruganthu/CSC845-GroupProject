@@ -8,21 +8,16 @@ class InvalidType(Exception):
     (outside the range 0 to 63, inclusive)."""
     pass
 
-class M2Protocol:
+def send(socket, type, payload):
+    """Send a message to the socket, given the message type as an integer
+    value and the payload as a character string. Returns True if the
+    message is sent successfully and False if the socket has been closed.
+    Raises InvalidType if type is outside the range 0 to 63, inclusive.
+    Raises PayloadTooBig is the payload is too big for the message type."""
+    pass
 
-    def __init__(self, socket):
-        self.socket = socket
-
-    def send(self, type, payload):
-        """Send a message to the socket, given the message type as an integer
-        value and the payload as a character string. Returns True if the
-        message is sent successfully and False if the socket has been closed.
-        Raises InvalidType if type is outside the range 0 to 63, inclusive.
-        Raises PayloadTooBig is the payload is too big for the message type."""
-        pass
-
-    def recv(self):
-        """Receive a message from the socket. Returns a pair containing the
-        message type as an integer value and the payload as a character
-        string. Returns None if the socket has been closed."""
-        pass
+def recv(socket):
+    """Receive a message from the socket. Returns a pair containing the
+    message type as an integer value and the payload as a character
+    string. Returns None if the socket has been closed."""
+    pass
