@@ -1,7 +1,7 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
 from threading import Thread
-from m1proto import M1Protocol
+import m1proto
 
 HOST = sys.argv[1]
 PORT = int(sys.argv[2])
@@ -23,16 +23,21 @@ print('Waiting for Connection')
 server.listen(5) # listen to connections
 
 def client_thread(connection, address):
-    with M1Protocol(connection) as proto:
+    try:
         while True:
-            data = proto.recv()
+            data = m1proto.recv(connection)
             if data is None:
                 break # if data is not received break
             print(f"From connected Client {address}): " + str(data))
             # broadcast msg to all clients
             for single_client in clients:
-                with M1Protocol(single_client) as proto_broadcast: # use connection object as single_client
-                    proto_broadcast.send(data)
+                m1proto.send(single_client, data)
+    finally:
+        try:
+            connection.shutdown(socket.SHUT_RDWR)
+            connection.close()
+        except:
+            pass
 
 try:
     while True:
@@ -47,4 +52,8 @@ try:
 except KeyboardInterrupt:
     sys.exit()
 finally:
-    server.close()
+    try:
+        server.shutdown(socket.SHUT_RDWR)
+        server.close()
+    except:
+        pass
