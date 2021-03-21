@@ -1,16 +1,21 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
-from _thread import * # to accept multiple client connections
+from threading import Thread
 from m1proto import M1Protocol
 
 HOST = sys.argv[1]
 PORT = int(sys.argv[2])
+# HOST="localhost"
+# PORT=9996
+
 # create a socket object
 # AF_INET similar to ipv4, SOCK_STREAM represents TCP
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 print('Socket Created')
-threadCount = 0
+
+threadCount = 0 # keep a count of no. of clients
+clients = {} # to store list of clients
 
 # bind to the host & port passed in the commandline
 server.bind((HOST,PORT))
@@ -23,18 +28,23 @@ def client_thread(connection, address):
             data = proto.recv()
             if data is None:
                 break # if data is not received break
-            print(f"From connected Client {address}: " + str(data))
-            proto.send(data)
-        connection.close()
+            print(f"From connected Client {address}): " + str(data))
+            # broadcast msg to all clients
+            for single_client in clients:
+                with M1Protocol(single_client) as proto_broadcast: # use connection object as single_client
+                    proto_broadcast.send(data)
 
 try:
     while True:
         connection, address = server.accept() # establish connection, blocking call, waits until there is a connection
         print("Connection successful! Address: " + address[0] + ':' + str(address[1]))
-        start_new_thread(client_thread, (connection, address)) # create a new thread for every connected client
+        # mark each client thread as daemon so that it exits when the main program exits
+        client_thread_obj = Thread(target=client_thread, args=(connection, address),  daemon=True)
+        client_thread_obj.start()
+        clients[connection]= address[1] # store the connection object and the address
         threadCount +=1
         print('Thread Number: ' + str(threadCount))
 except KeyboardInterrupt:
-    pass
+    sys.exit()
 finally:
     server.close()
