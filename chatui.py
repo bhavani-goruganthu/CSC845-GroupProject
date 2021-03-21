@@ -25,12 +25,12 @@ class ChatUI:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.__send_exit_signals()
+        self.send_exit_signals()
         self.exited.wait()
         self.io.__exit__(exc_type, exc_value, traceback)
         return False
 
-    def __send_exit_signals(self):
+    def send_exit_signals(self):
         self.exiting.set()
         self.input_queue.put(None)
         self.output_queue.put(('exiting'))
@@ -52,7 +52,7 @@ class ChatUI:
             elif c == 0x08 or c == 0x7F: # BS or DEL
                 line = line[:-1]
             elif c == 0x03 or c == 0x04 or c == 0x1A: # ^C, ^D, or ^Z
-                self.__send_exit_signals()
+                self.send_exit_signals()
                 return
 
     def __output_thread(self):
