@@ -16,10 +16,10 @@ def send(socket, msg_type, payload):
     Raises PayloadTooBig is the payload is too big for the message type."""
     enc_msg = payload.encode('utf-8')
     len_encmsg = len(enc_msg)
-    if(len_encmsg == None): # Empty Header Format
+    if len_encmsg == 0: # Empty Header Format
         # for message type = 0
-        if(msg_type >=0 & msg_type <= 63):
-            if(msg_type == 0):
+        if msg_type >= 0 and msg_type <= 63:
+            if msg_type == 0:
                 arranged_bits = "11000000"
                 msg_tosend = int(arranged_bits,2).to_bytes(1, "big")
                 try:
@@ -27,12 +27,12 @@ def send(socket, msg_type, payload):
                     return True
                 except:
                     return False
-            # elif(msg_type >= 1 & msg_type <= 7):
+            # elif(msg_type >= 1 and msg_type <= 7):
             #     return True
         else:
-            raise InvalidType
-    elif(len_encmsg <= 256): # Short Header Format
-        if(msg_type >=0 & msg_type <= 63):
+            raise InvalidType        
+    elif len_encmsg > 0 and len_encmsg <= 256: # Short Header Format
+        if(msg_type >= 0 and msg_type <= 63):
             if(msg_type == 0):
                 l_value = len_encmsg - 1
                 arranged_bits = "10000000" # 1st byte
@@ -44,25 +44,26 @@ def send(socket, msg_type, payload):
                     return True
                 except:
                     return False
-            elif(msg_type >= 1 & msg_type <= 7):
-                return True # to change it later
+            # elif(msg_type >= 1 and msg_type <= 7):
+            #     return True # to change it later
         else:
             raise InvalidType
-    elif(len_encmsg <=4096): # Long Header Format
-        if(msg_type >=0 & msg_type <= 63):
+    elif len_encmsg > 256 and len_encmsg<=4096: # Long Header Format
+        if(msg_type >=0 and msg_type <= 63):
             if(msg_type == 0):
                 l_value = len_encmsg - 1
                 arranged_bits = "0000" # 4 bits
-                byte_x = int(arranged_bits,2).to_bytes(4, "big")
-                byte_y = l_value.to_bytes(12, "big") # rest bits -> 12
-                msg_tosend = byte_x+byte_y+enc_msg
+                byte_x = int(arranged_bits,2).to_bytes(1, "big")
+                byte_y = l_value.to_bytes(2, "big") # rest bits -> 12
+                # msg_tosend = byte_x+byte_y+enc_msg # why not this?
+                msg_tosend = byte_y+enc_msg
                 try:
                     socket.sendall(msg_tosend)
                     return True
                 except:
                     return False
-            elif(msg_type >= 1 & msg_type <= 7):
-                return True # to change it later
+            # elif(msg_type >= 1 and msg_type <= 7):
+            #     return True # to change it later
         else:
             raise InvalidType
     elif(len_encmsg > 4096): # Invalid Payload Size
