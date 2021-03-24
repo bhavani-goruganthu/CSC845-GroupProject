@@ -73,21 +73,15 @@ def recv(socket):
     string. Returns None if the socket has been closed."""
     try:
         byte_x = int.from_bytes(socket.recv(1),"big")
-        msg_type_bits = [] # bits put in a list for decoding the message type T
-        l_value_bits = [] # bits put in a list for decoding the value of L (Long Header Format)
         if (byte_x >> 7 & 1) == 1:
             if (byte_x >> 6 & 1) == 1: # Empty Header Format
-                for bit_x in range(5,-1,-1):
-                    msg_type_bits.append(byte_x >> bit_x & 1)
-                msg_type = int(''.join(map(str,msg_type_bits)),2) # msg type integer 0 to 63
+                msg_type = byte_x & 0b00111111
                 if (msg_type == 0): # type 0
                     return (0,'')
                 else: # for other types
                     return None
             elif (byte_x >> 6 & 0) == 0: # Short Header Format
-                for bit_x in range(5,-1,-1):
-                    msg_type_bits.append(byte_x >> bit_x & 1)
-                msg_type = int(''.join(map(str,msg_type_bits)),2) # msg type integer 0 to 63
+                msg_type = byte_x & 0b00111111
                 byte_y = int.from_bytes(socket.recv(1),'big') # read byte_y which is the payload length - 1
                 payload = socket.recv(byte_y+1, MSG_WAITALL)
                 if (msg_type == 0): # type 0                
@@ -95,21 +89,10 @@ def recv(socket):
                 else: # for other types
                     return None
         elif (byte_x >> 7 & 1) == 0: # Long Header Format
-            # for msg_type
-            for bit_x in range(6,3,-1):
-                msg_type_bits.append(byte_x >> bit_x & 1)
-            msg_type = int(''.join(map(str,msg_type_bits)),2) # msg type integer 0 to 63
-            
-            # for value of L
-            for bit_x in range(3,-1,-1):
-                l_value_bits.append(byte_x >> bit_x & 1)
-            l_value_fromx = int(''.join(map(str,l_value_bits)),2)
+            msg_type = ( byte_x & 0b01110000 ) >> 4
             byte_y = int.from_bytes(socket.recv(1),'big') # read byte_y which is the payload length - 1
-            
-            l_value = (l_value_fromx << 8) + byte_y
-
-            payload = socket.recv(l_value+1, MSG_WAITALL)
-            
+            l_value = ((byte_x & 0b00001111) << 8) | byte_y
+            payload = socket.recv(l_value+1, MSG_WAITALL)            
             if (msg_type == 0): # type 0
                 return (0, payload.decode('utf-8'))
             else: # for other types
