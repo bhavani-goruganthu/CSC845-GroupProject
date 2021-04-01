@@ -43,8 +43,11 @@ class M2ProtocolTests(TestCase):
     def test_send_too_big_for_long(self):
         self.__test_send_raises(0, 'x' * 4097, m2proto.PayloadTooBig)
 
+    # def test_send_too_big_for_short(self):
+    #     self.__test_send_raises(8, 'x' * 257, m2proto.PayloadTooBig)
+
     def test_send_too_big_for_short(self):
-        self.__test_send_raises(8, 'x' * 257, m2proto.PayloadTooBig)
+        self.__test_send_raises(8, 'x' * 257, m2proto.InvalidType)
 
     def test_send_negative_type(self):
         self.__test_send_raises(-1, '', m2proto.InvalidType)

@@ -74,7 +74,9 @@ def recv(socket):
     string. Returns None if the socket has been closed."""
     try:
         byte_x = int.from_bytes(socket.recv(1, MSG_WAITALL),"big")
-        if (byte_x >> 7 & 1) == 1:
+        if byte_x == b'':
+            return None
+        elif (byte_x >> 7 & 1) == 1:
             if (byte_x >> 6 & 1) == 1: # Empty Header Format
                 msg_type = byte_x & 0b00111111
                 return (msg_type,'')
@@ -82,20 +84,32 @@ def recv(socket):
                 msg_type = byte_x & 0b00111111
                 try:
                     byte_y = int.from_bytes(socket.recv(1,MSG_WAITALL),'big') # read byte_y which is the payload length - 1
-                    payload = socket.recv(byte_y+1, MSG_WAITALL)
-                    return (msg_type, payload.decode('utf-8'))
+                    if byte_y == b'':
+                        return None
+                    else:
+                        payload = socket.recv(byte_y+1, MSG_WAITALL)
+                        if len(payload) != byte_y + 1:
+                            return None
+                        else:                        
+                            return (msg_type, payload.decode('utf-8'))
                 except:
                     return None
         elif (byte_x >> 7 & 1) == 0: # Long Header Format            
             try:
                 msg_type = ( byte_x & 0b01110000 ) >> 4
                 byte_y = int.from_bytes(socket.recv(1,MSG_WAITALL),'big') # read byte_y which is the payload length - 1
-                l_value = ((byte_x & 0b00001111) << 8) | byte_y
-                payload = socket.recv(l_value+1, MSG_WAITALL)
-                return (msg_type, payload.decode('utf-8'))
+                if byte_y == b'':
+                        return None
+                else:
+                    l_value = ((byte_x & 0b00001111) << 8) | byte_y
+                    payload = socket.recv(l_value+1, MSG_WAITALL)
+                    if len(payload) != l_value + 1:
+                        return None
+                    else:                    
+                        return (msg_type, payload.decode('utf-8'))
             except:
                 return None
         else:
-            return None
+            return None        
     except:
-        pass
+        return None
