@@ -1,7 +1,7 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
 from threading import Thread
-import m1proto
+import m2proto
 
 # HOST = sys.argv[1]
 # PORT = int(sys.argv[2])
@@ -25,13 +25,17 @@ server.listen(5) # listen to connections
 def client_thread(connection, address):
     try:
         while True:
-            data = m1proto.recv(connection)
-            if data is None:
-                break # if data is not received break
-            print(f"From connected Client {address}): " + str(data))
-            # broadcast msg to all clients
-            for single_client in clients:
-                m1proto.send(single_client, data)
+            data = m2proto.recv(connection)
+            if data is not None:
+                (msg_type , payload) = data
+                if payload == '':
+                    break # if payload is empty break
+                print(f"From connected Client {address}): " + str(payload))
+                # broadcast msg to all clients
+                for single_client in clients:
+                    m2proto.send(single_client, 0, payload)
+            else:
+                break
     finally:
         try:
             connection.shutdown(socket.SHUT_RDWR)
