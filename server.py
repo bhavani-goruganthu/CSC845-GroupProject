@@ -28,12 +28,14 @@ def client_thread(connection, address):
             data = m2proto.recv(connection)
             if data is not None:
                 (msg_type , payload) = data
-                if payload is None:
-                    break # if payload is not received break
+                if payload == '':
+                    break # if payload is empty break
                 print(f"From connected Client {address}): " + str(payload))
                 # broadcast msg to all clients
                 for single_client in clients:
                     m2proto.send(single_client, 0, payload)
+            else:
+                break
     finally:
         try:
             connection.shutdown(socket.SHUT_RDWR)
