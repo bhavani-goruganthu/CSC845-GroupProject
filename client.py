@@ -20,15 +20,14 @@ print("Connected to the Server Socket..!!")
 
 def receive():
     response = m2proto.recv(client)
-    (msg_type , payload) = response
     while response != None: # receive and print responses from the server (can be many)
+        (msg_type, payload) = response
         if msg_type == 13:
             ui.set_prefix(payload)
         elif msg_type == 0:
             ui.add_output(payload)
             ui.set_prefix(None)
         response = m2proto.recv(client)
-        (msg_type , payload) = response
     ui.send_exit_signals()
 
 
