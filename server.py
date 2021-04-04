@@ -1,6 +1,6 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
-from threading import Thread
+from threading import Thread, Lock
 import m2proto
 
 # HOST = sys.argv[1]
@@ -16,6 +16,7 @@ print('Socket Created')
 
 threadCount = 0 # keep a count of no. of clients
 clients = {} # to store list of clients
+clients_lock = Lock()
 
 # bind to the host & port passed in the commandline
 server.bind((HOST,PORT))
@@ -27,37 +28,51 @@ def receive_login(connection):
     while True:
         username_msg = m2proto.recv(connection)
         if not username_msg or username_msg[0] != 8:
-            return False
+            return None
         password_msg = m2proto.recv(connection)
         if not password_msg or password_msg[0] != 9:
-            return False
+            return None
         if password_msg[1] == username_msg[1][::-1]:
             m2proto.send(connection, 10, "")
-            return True
+            return username_msg[1]
         else:
             m2proto.send(connection, 11, "")
 
 
 def client_thread(connection, address):
     try:
-        if receive_login(connection):
-            clients[connection] = address[1]  # store the connection object and the address
+        username = receive_login(connection)
+        if username is not None:
+            clients_lock.acquire()
+            try:
+                clients[connection] = address[1]  # store the connection object and the address
+            finally:
+                clients_lock.release()
             while True:
                 data = m2proto.recv(connection)
                 if data is not None:
                     (msg_type , payload) = data
                     print(f"From connected Client {address}): " + str(payload))
-                    # broadcast msg to all clients
-                    for single_client in clients:
-                        m2proto.send(single_client, 0, payload)
+                    clients_lock.acquire()
+                    try:
+                        # broadcast msg to all clients
+                        for single_client in clients:
+                            m2proto.send(single_client, 13, username)
+                            m2proto.send(single_client, 0, payload)
+                    finally:
+                        clients_lock.release()
                 else:
                     break
     finally:
+        clients_lock.acquire()
         try:
+            del clients[connection]
             connection.shutdown(socket.SHUT_RDWR)
             connection.close()
         except:
             pass
+        finally:
+            clients_lock.release()
 
 
 try:
