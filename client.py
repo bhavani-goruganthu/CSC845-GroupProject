@@ -1,5 +1,6 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
+import ssl # wrapper for socket objects - TLS encryption
 from threading import Thread
 from chatui import ChatUI
 import m2proto
@@ -8,21 +9,29 @@ import m2proto
 # PORT = int(sys.argv[2])
 HOST="localhost"
 PORT=9996
+server_hostname = 'localhost'
+
+# returns a new context with secure default settings
+context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
 
 # create a socket object
  # AF_INET similar to ipv4, SOCK_STREAM represents TCP
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+# to create a client-side SSL socket for the connection:
+conn = context.wrap_socket(client, server_side=False, server_hostname=server_hostname)
+
 # connect to the host and port the server socket is on
-client.connect((HOST, PORT))
+conn.connect((HOST, PORT))
 print("Connected to the Server Socket..!!")
 
 def receive():
-    response = m2proto.recv(client)
+    response = m2proto.recv(conn)
     (msg_type , payload) = response
     while response != None: # receive and print responses from the server (can be many)
         ui.add_output(payload)
-        response = m2proto.recv(client)
+        response = m2proto.recv(conn)
         (msg_type , payload) = response
     ui.send_exit_signals()
 
@@ -32,14 +41,14 @@ try:
         receive_thread.start() # start the receive thread
         message = ui.get_input() # get input from user
         while message != None:
-            if not m2proto.send(client, 0, message): # send msgs from user to the server
+            if not m2proto.send(conn, 0, message): # send msgs from user to the server
                 break
             message = ui.get_input()
 except KeyboardInterrupt:
     pass
 finally:
     try:
-        client.shutdown(socket.SHUT_RDWR)
-        client.close()
+        conn.shutdown(socket.SHUT_RDWR)
+        conn.close()
     except:
         pass

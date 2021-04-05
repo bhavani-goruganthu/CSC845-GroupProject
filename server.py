@@ -1,5 +1,6 @@
 import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
+import ssl # wrapper for socket objects - TLS encryption
 from threading import Thread
 import m2proto
 
@@ -7,6 +8,10 @@ import m2proto
 # PORT = int(sys.argv[2])
 HOST="localhost"
 PORT=9996
+
+# returns a new context with secure default settings
+context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+
 
 # create a socket object
 # AF_INET similar to ipv4, SOCK_STREAM represents TCP
@@ -47,10 +52,13 @@ try:
     while True:
         connection, address = server.accept() # establish connection, blocking call, waits until there is a connection
         print("Connection successful! Address: " + address[0] + ':' + str(address[1]))
+        # to create a server-side SSL socket for the connection:
+        conn = context.wrap_socket(connection, server_side=True)
+        print("SSL established")
         # mark each client thread as daemon so that it exits when the main program exits
-        client_thread_obj = Thread(target=client_thread, args=(connection, address),  daemon=True)
+        client_thread_obj = Thread(target=client_thread, args=(conn, address),  daemon=True)
         client_thread_obj.start()
-        clients[connection]= address[1] # store the connection object and the address
+        clients[conn]= address[1] # store the connection object and the address
         threadCount +=1
         print('Thread Number: ' + str(threadCount))
 except KeyboardInterrupt:
