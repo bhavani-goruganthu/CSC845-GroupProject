@@ -31,7 +31,7 @@ class MyTestCase(unittest.TestCase):
     def test_valid_credentials(self):
         password = "Nobody inspects"
         res = check_user_credentials('test_user', password)
-        self.assertEqual(res, 1)
+        self.assertEqual(res, 10)
 
     def test_invalid_password(self):
         password = "not valid"
@@ -41,4 +41,4 @@ class MyTestCase(unittest.TestCase):
     def test_invalid_username(self):
         password = "Nobody inspects"
         res = check_user_credentials('not_user', password)
-        self.assertEqual(res, 0)
+        self.assertEqual(res, 11)

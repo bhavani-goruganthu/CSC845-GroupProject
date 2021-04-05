@@ -2,6 +2,7 @@ import sys # to accept commandline arguments
 import socket  # used to send and receive data between endpoints
 from threading import Thread, Lock
 import m2proto
+from auth import check_user_credentials
 
 # HOST = sys.argv[1]
 # PORT = int(sys.argv[2])
@@ -32,7 +33,7 @@ def receive_login(connection):
         password_msg = m2proto.recv(connection)
         if not password_msg or password_msg[0] != 9:
             return None
-        if password_msg[1] == username_msg[1][::-1]:
+        if check_user_credentials(username_msg[1], password_msg[1]) == 10:#password_msg[1] == username_msg[1][::-1]:
             m2proto.send(connection, 10, "")
             return username_msg[1]
         else:

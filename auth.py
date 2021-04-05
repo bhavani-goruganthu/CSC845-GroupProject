@@ -49,12 +49,12 @@ def check_user_credentials(login, password):
     credentials = get_user_info(login)
     if not credentials:
         print("User name does not exit!")
-        return 0
+        return 11
     else:
         user_input = salted_password_hashing(password, credentials[0])
         if user_input == credentials[1]:
             print("Welcome")
-            return 1
+            return 10
         else:
             print("Password invalid!")
             return 11
@@ -66,7 +66,7 @@ def insert_random_user():
     salt = ''.join(random.choice(letters) for i in range(3)).encode()
     password = ''.join(random.choice(letters) for i in range(10))
     hash = salted_password_hashing(password, salt)
-    print(f"Inserting random user login={login}, login={salt}, login={password}")
+    print(f"Inserting random user login={login}, salt={salt}, password={password}")
     return  insert_user(login, salt, hash)
 
 
