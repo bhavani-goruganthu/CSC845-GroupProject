@@ -2,6 +2,7 @@ import sqlite3 as sql
 import hashlib
 import string
 import random
+from secrets import token_bytes
 
 
 def execute_users_statement(statement, fetchone=True):
@@ -49,7 +50,8 @@ def check_user_credentials(login, password):
     credentials = get_user_info(login)
     if not credentials:
         print("User name does not exit!")
-        return 11
+        register(login, password)
+        return 12
     else:
         user_input = salted_password_hashing(password, credentials[0])
         if user_input == credentials[1]:
@@ -63,26 +65,33 @@ def check_user_credentials(login, password):
 def insert_random_user():
     letters = string.ascii_letters
     login = ''.join(random.choice(letters) for i in range(5))
-    salt = ''.join(random.choice(letters) for i in range(3)).encode()
+    salt = token_bytes(16)
     password = ''.join(random.choice(letters) for i in range(10))
-    hash = salted_password_hashing(password, salt)
-    print(f"Inserting random user login={login}, salt={salt}, password={password}")
-    return  insert_user(login, salt, hash)
+    hashed_password = salted_password_hashing(password, salt)
+    print(f"Inserting random user login={login}, salt={salt}, password={password}, hashed_password={hashed_password}")
+    return insert_user(login, salt, hashed_password)
 
 
-def insert_user(login, salt, hash):
+def register(login, password):
+    salt = token_bytes(16)
+    hashed_password = salted_password_hashing(password, salt)
+    print(f"Register user login={login}, salt={salt}, password={password}, hashed_password={hashed_password}")
+    return insert_user(login, salt, hashed_password)
+
+
+def insert_user(login, salt, hashed_password):
     user = get_user_info(login)
     if user is None:
         con = sql.connect("users.db")
         c = con.cursor()
         salt = sql.Binary(salt)
-        hash = sql.Binary(hash)
-        c.execute('INSERT INTO users (login, salt, hash) VALUES (?, ?, ?)', (login, salt, hash))
-        id = c.lastrowid
-        print(id)
+        hashed_password = sql.Binary(hashed_password)
+        c.execute('INSERT INTO users (login, salt, hash) VALUES (?, ?, ?)', (login, salt, hashed_password))
+        row_id = c.lastrowid
+        print(row_id)
         con.commit()
         con.close()
-        return id
+        return row_id
     else:
         print('user exists')
         print(user)

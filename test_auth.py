@@ -13,6 +13,10 @@ class MyTestCase(unittest.TestCase):
         id = insert_random_user()
         self.assertGreater(id, 0)
 
+    def test_register(self):
+        id = register("cool", "sfsu")
+        self.assertGreater(id, 0)
+
     def test_view_users(self):
         records = view_users()
         self.assertFalse(records is None)

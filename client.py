@@ -52,6 +52,9 @@ def login():
         elif response[0] == 10:
             print("Login successful.")
             return True
+        elif response[0] == 12:
+            print("New user registered.")
+            return True
         elif response[0] == 11:
             print("Login failed.")
         else:
