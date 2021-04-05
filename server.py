@@ -33,7 +33,7 @@ def receive_login(connection):
         password_msg = m2proto.recv(connection)
         if not password_msg or password_msg[0] != 9:
             return None
-        if check_user_credentials(username_msg[1], password_msg[1]) == 10:#password_msg[1] == username_msg[1][::-1]:
+        if check_user_credentials(username_msg[1], password_msg[1]) == 10:
             m2proto.send(connection, 10, "")
             return username_msg[1]
         else:
