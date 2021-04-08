@@ -1,7 +1,7 @@
 from queue import Queue
 from threading import Thread, Event
 import platform
-import time
+
 
 class ChatUI:
 
@@ -33,29 +33,30 @@ class ChatUI:
     def send_exit_signals(self):
         self.exiting.set()
         self.input_queue.put(None)
-        self.output_queue.put(('exiting'))
+        self.output_queue.put(('exiting',))
 
     def __input_thread(self):
         line = ""
         while True:
             self.output_queue.put(('input', line))
             c = self.io.getch()
-            if 0x20 <= c and c <= 0x7E: # printable
+            if 0x20 <= c <= 0x7E:  # printable
                 line += chr(c)
-            elif c == 0x0D: # CR
+            elif c == 0x0D:  # CR
                 line = line.strip()
                 if line != "":
                     self.input_queue.put(line)
                 line = ""
-            elif c == 0x1B: # ESC
+            elif c == 0x1B:  # ESC
                 line = ""
-            elif c == 0x08 or c == 0x7F: # BS or DEL
+            elif c == 0x08 or c == 0x7F:  # BS or DEL
                 line = line[:-1]
-            elif c == 0x03 or c == 0x04 or c == 0x1A: # ^C, ^D, or ^Z
+            elif c == 0x03 or c == 0x04 or c == 0x1A:  # ^C, ^D, or ^Z
                 self.send_exit_signals()
                 return
 
     def __output_thread(self):
+        prefix = "*"
         last_line = ""
         cursor = False
         while True:
@@ -66,9 +67,11 @@ class ChatUI:
                 last_line = command[1]
             elif op == 'output':
                 line = command[1]
-                self.io.write("\r" + self.__format_output(line) + "\n")
+                self.io.write("\r" + self.__format_output(prefix, line) + "\n")
             elif op == 'cursor':
                 cursor = command[1]
+            elif op == 'prefix':
+                prefix = command[1]
             else:
                 self.io.write("\r" + self.__format_input(last_line, False) + "\r\n")
                 self.exited.set()
@@ -90,37 +93,8 @@ class ChatUI:
         else:
             return "> " + line + cursor_char + " " * (max_length - (length + 3))
 
-    def __format_output(self, line):
-        max_length = self.io.columns() - 3
-        words = line.split()
-        formatted_lines = []
-        formatted_line = ['*']
-        length = 0
-        while len(words) > 0:
-            word = words[0]
-            if length == 0:
-                if len(word) > max_length:
-                    formatted_line.append(word[:max_length])
-                    length = max_length
-                    words[0] = word[max_length:]
-                else:
-                    formatted_line.append(word)
-                    length = len(word)
-                    words.pop(0)
-            elif length + 1 + len(word) > max_length:
-                if length < max_length:
-                    formatted_line.append(" " * (max_length - length - 1))
-                formatted_lines.append(formatted_line)
-                formatted_line = [' ']
-                length = 0
-            else:
-                formatted_line.append(word)
-                length += 1 + len(word)
-                words.pop(0)
-        if length < max_length:
-            formatted_line.append(" " * (max_length - length - 1))
-        formatted_lines.append(formatted_line)
-        return "\r\n".join([" ".join(words) for words in formatted_lines])
+    def __format_output(self, prefix, line):
+        return format_output(self.io.columns(), prefix, line)
 
     def get_input(self, block = True, timeout = None):
         """Read one line of input from the user. Returns None if the user exits."""
@@ -129,6 +103,10 @@ class ChatUI:
     def add_output(self, line):
         """Displays one line of output to the user."""
         self.output_queue.put(('output', line))
+
+    def set_prefix(self, prefix):
+        """Sets the prefix for messages, such as a username."""
+        self.output_queue.put(('prefix', prefix + " *" if prefix else "*"))
 
     def is_exiting(self):
         """Returns True or False depending on whether the user has exited
@@ -139,3 +117,36 @@ class ChatUI:
         """Waits until the user exits or the given timeout has elapsed, and then
         returns the same as is_exiting()."""
         return self.exiting.wait(timeout)
+
+
+def format_output(columns, prefix, line):
+    max_length = columns - 1
+    words = line.split()
+    formatted_lines = []
+    formatted_line = [prefix]
+    at_start_of_line = True
+    length = len(prefix)
+    while len(words) > 0:
+        word = words[0]
+        if length + 1 + len(word) <= max_length:
+            formatted_line.append(word)
+            length += 1 + len(word)
+            at_start_of_line = False
+            words.pop(0)
+        elif at_start_of_line:
+            partial_length = max_length - length - 1
+            formatted_line.append(word[:partial_length])
+            length = max_length
+            at_start_of_line = False
+            words[0] = word[partial_length:]
+        else:
+            if length < max_length:
+                formatted_line.append(" " * (max_length - length - 1))
+            formatted_lines.append(formatted_line)
+            formatted_line = [' ']
+            length = 1
+            at_start_of_line = True
+    if length < max_length:
+        formatted_line.append(" " * (max_length - length - 1))
+    formatted_lines.append(formatted_line)
+    return "\r\n".join([" ".join(words) for words in formatted_lines])
