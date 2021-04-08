@@ -50,36 +50,28 @@ def client_thread(connection, address):
     try:
         username = receive_login(connection)
         if username is not None:
-            clients_lock.acquire()
-            try:
+            with clients_lock:
                 clients[connection] = address[1]  # store the connection object and the address
-            finally:
-                clients_lock.release()
             while True:
                 data = m2proto.recv(connection)
                 if data is not None:
                     (msg_type , payload) = data
                     print(f"From connected Client {address}): " + str(payload))
-                    clients_lock.acquire()
-                    try:
+                    with clients_lock:
                         # broadcast msg to all clients
                         for single_client in clients:
                             m2proto.send(single_client, 13, username)
                             m2proto.send(single_client, 0, payload)
-                    finally:
-                        clients_lock.release()
                 else:
                     break
     finally:
-        clients_lock.acquire()
-        try:
-            del clients[connection]
-            connection.shutdown(socket.SHUT_RDWR)
-            connection.close()
-        except:
-            pass
-        finally:
-            clients_lock.release()
+        with clients_lock:
+            try:
+                del clients[connection]
+                connection.shutdown(socket.SHUT_RDWR)
+                connection.close()
+            except:
+                pass
 
 
 try:
