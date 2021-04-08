@@ -10,8 +10,7 @@ HOST="localhost"
 PORT=9996
 
 # returns a new context with secure default settings
-context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-
+context = ssl.SSLContext(ssl.PROTOCOL_TLS)
 
 # create a socket object
 # AF_INET similar to ipv4, SOCK_STREAM represents TCP
@@ -53,7 +52,8 @@ try:
         connection, address = server.accept() # establish connection, blocking call, waits until there is a connection
         print("Connection successful! Address: " + address[0] + ':' + str(address[1]))
         # to create a server-side SSL socket for the connection:
-        conn = context.wrap_socket(connection, server_side=True)
+        # conn = context.wrap_socket(connection, server_side=True)
+        conn = context.wrap_socket(connection, server_side=True, do_handshake_on_connect=False,suppress_ragged_eofs=True, session=None) 
         print("SSL established")
         # mark each client thread as daemon so that it exits when the main program exits
         client_thread_obj = Thread(target=client_thread, args=(conn, address),  daemon=True)

@@ -9,10 +9,9 @@ import m2proto
 # PORT = int(sys.argv[2])
 HOST="localhost"
 PORT=9996
-server_hostname = 'localhost'
 
 # returns a new context with secure default settings
-context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+context = ssl.SSLContext(ssl.PROTOCOL_TLS)
 
 # create a socket object
  # AF_INET similar to ipv4, SOCK_STREAM represents TCP
@@ -20,7 +19,9 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 # to create a client-side SSL socket for the connection:
-conn = context.wrap_socket(client, server_side=False, server_hostname=server_hostname)
+# conn = context.wrap_socket(client, server_side=False, server_hostname=server_hostname)
+conn = context.wrap_socket(client, server_side=False, do_handshake_on_connect=False, 
+    suppress_ragged_eofs=True, session=None)
 
 # connect to the host and port the server socket is on
 conn.connect((HOST, PORT))
@@ -28,11 +29,12 @@ print("Connected to the Server Socket..!!")
 
 def receive():
     response = m2proto.recv(conn)
-    (msg_type , payload) = response
-    while response != None: # receive and print responses from the server (can be many)
+    while response != None:
+        (msg_type , payload) = response
+    # while response != None: # receive and print responses from the server (can be many)
         ui.add_output(payload)
         response = m2proto.recv(conn)
-        (msg_type , payload) = response
+        # (msg_type , payload) = response
     ui.send_exit_signals()
 
 try:
