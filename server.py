@@ -10,8 +10,6 @@ from auth import check_user_credentials
 HOST="localhost"
 PORT=9996
 
-# returns a new context with secure default settings
-context = ssl.SSLContext(ssl.PROTOCOL_TLS)
 
 # create a socket object
 # AF_INET similar to ipv4, SOCK_STREAM represents TCP
@@ -32,15 +30,18 @@ server.listen(5) # listen to connections
 def receive_login(connection):
     while True:
         username_msg = m2proto.recv(connection)
+        print(username_msg)
         if not username_msg or username_msg[0] != 8:
             return None
         password_msg = m2proto.recv(connection)
+        print(password_msg)
         if not password_msg or password_msg[0] != 9:
             return None
 
         result = check_user_credentials(username_msg[1], password_msg[1])
         if result == 10 or result == 12:
             m2proto.send(connection, result, "")
+            print(username_msg[1])
             return username_msg[1]
         else:
             m2proto.send(connection, 11, "")
@@ -76,16 +77,24 @@ def client_thread(connection, address):
 
 try:
     while True:
-        connection, address = server.accept() # establish connection, blocking call, waits until there is a connection
+        conn, address = server.accept() # establish connection, blocking call, waits until there is a connection
         print("Connection successful! Address: " + address[0] + ':' + str(address[1]))
+        
         # to create a server-side SSL socket for the connection:
-        # conn = context.wrap_socket(connection, server_side=True)
-        conn = context.wrap_socket(connection, server_side=True, do_handshake_on_connect=False,suppress_ragged_eofs=True, session=None) 
-        print("SSL established")
+        # connection = context.wrap_socket(conn, server_side=True, do_handshake_on_connect=False,suppress_ragged_eofs=True, session=None) 
+        connection = ssl.wrap_socket(conn, server_side=True,
+                                # ca_certs=None,  
+                                certfile=None, 
+                                do_handshake_on_connect=False, 
+                                # suppress_ragged_eofs=False, ciphers=None,
+                                cert_reqs=ssl.CERT_NONE,
+                                ssl_version=ssl.PROTOCOL_TLS)
+        print("TLS established")
+        
         # mark each client thread as daemon so that it exits when the main program exits
-        client_thread_obj = Thread(target=client_thread, args=(conn, address),  daemon=True)
+        client_thread_obj = Thread(target=client_thread, args=(connection, address),  daemon=True)
         client_thread_obj.start()
-        clients[conn]= address[1] # store the connection object and the address
+        clients[connection]= address[1] # store the connection object and the address
         threadCount +=1
         print('Thread Number: ' + str(threadCount))
 except KeyboardInterrupt:
