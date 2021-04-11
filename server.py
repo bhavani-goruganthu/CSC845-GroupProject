@@ -10,6 +10,15 @@ from auth import check_user_credentials
 HOST="localhost"
 PORT=9996
 
+# certificate paths
+server_cert = "newcerts/server-cert.pem"
+server_key = 'newcerts/server-key.pem'
+ca_cert = 'newcerts/ca-cert.pem'
+
+context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+context.verify_mode = ssl.CERT_REQUIRED
+context.load_cert_chain(certfile=server_cert, keyfile=server_key)
+context.load_verify_locations(cafile=ca_cert)
 
 # create a socket object
 # AF_INET similar to ipv4, SOCK_STREAM represents TCP
@@ -82,13 +91,7 @@ try:
         
         # to create a server-side SSL socket for the connection:
         # connection = context.wrap_socket(conn, server_side=True, do_handshake_on_connect=False,suppress_ragged_eofs=True, session=None) 
-        connection = ssl.wrap_socket(conn, server_side=True,
-                                # ca_certs=None,  
-                                certfile=None, 
-                                do_handshake_on_connect=False, 
-                                # suppress_ragged_eofs=False, ciphers=None,
-                                cert_reqs=ssl.CERT_NONE,
-                                ssl_version=ssl.PROTOCOL_TLS)
+        connection = context.wrap_socket(conn, server_side=True)
         print("TLS established")
         
         # mark each client thread as daemon so that it exits when the main program exits
