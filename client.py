@@ -1,13 +1,12 @@
+import sys
 import socket  # used to send and receive data between endpoints
 from threading import Thread
 from chatui import ChatUI
 import m2proto
 from getpass import getpass
 
-# HOST = sys.argv[1]
-# PORT = int(sys.argv[2])
-HOST="localhost"
-PORT=9996
+HOST = sys.argv[1]
+PORT = int(sys.argv[2])
 
 # create a socket object
  # AF_INET similar to ipv4, SOCK_STREAM represents TCP

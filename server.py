@@ -4,10 +4,8 @@ from threading import Thread, Lock
 import m2proto
 from auth import check_user_credentials
 
-# HOST = sys.argv[1]
-# PORT = int(sys.argv[2])
-HOST="localhost"
-PORT=9996
+HOST = sys.argv[1]
+PORT = int(sys.argv[2])
 
 # create a socket object
 # AF_INET similar to ipv4, SOCK_STREAM represents TCP
