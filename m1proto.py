@@ -1,4 +1,4 @@
-from socket import MSG_WAITALL
+from recvall import recvall
 
 class PayloadTooBig(Exception):
     """Exception raised when attempting to send a payload that is too large for
@@ -25,12 +25,12 @@ def recv(socket):
     """Receive a message from the socket. Returns a character string with
     the received payload. Returns None if the socket has been closed."""
     try:
-        len_byte = socket.recv(1)
+        len_byte = recvall(socket, 1)
         if len_byte == b'':
             return None
         else:
             data_len = int.from_bytes(len_byte, "big")
-            data = socket.recv(data_len, MSG_WAITALL)
+            data = recvall(socket, data_len)
             if len(data) != data_len:
                 return None
             else:
