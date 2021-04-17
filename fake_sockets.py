@@ -1,4 +1,4 @@
-from socket import MSG_WAITALL
+import math
 
 class FakeReadableSocket:
 
@@ -8,20 +8,16 @@ class FakeReadableSocket:
 
     def recv(self, max_bytes, flags = 0):
         data = self.data
-        if flags != 0 and flags != MSG_WAITALL:
-            raise AssertionError("The ony flag supported by FakeReadableSocket"
-                " is MSG_WAITALL")
+        if flags != 0:
+            raise AssertionError("We can't use any flags for recv because they're not supported by the ssl module")
         elif len(data) == 0:
             if self.raise_at_end:
                 raise Exception
             else:
                 return data
-        elif flags == 0:
-            self.data = data[1:]
-            return data[:1]
-        else:
-            self.data = data[max_bytes:]
-            return data[:max_bytes]
+        bytes_to_return = math.ceil(max_bytes / 2)
+        self.data = data[bytes_to_return:]
+        return data[:bytes_to_return]
 
     def fake_data(self):
         return self.data

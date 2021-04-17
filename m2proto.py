@@ -1,4 +1,5 @@
-from socket import MSG_WAITALL
+from recvall import recvall
+
 class PayloadTooBig(Exception):
     """Exception raised when attempting to send a payload that is too large for
     the protocol to handle for the provided message type."""
@@ -73,7 +74,7 @@ def recv(socket):
     message type as an integer value and the payload as a character
     string. Returns None if the socket has been closed."""
     try:
-        byte_x = int.from_bytes(socket.recv(1, MSG_WAITALL),"big")
+        byte_x = int.from_bytes(recvall(socket, 1), "big")
         if byte_x == b'':
             return None
         elif (byte_x >> 7 & 1) == 1:
@@ -83,11 +84,11 @@ def recv(socket):
             elif (byte_x >> 6 & 0) == 0: # Short Header Format
                 msg_type = byte_x & 0b00111111
                 try:
-                    byte_y = int.from_bytes(socket.recv(1,MSG_WAITALL),'big') # read byte_y which is the payload length - 1
+                    byte_y = int.from_bytes(recvall(socket, 1), 'big') # read byte_y which is the payload length - 1
                     if byte_y == b'':
                         return None
                     else:
-                        payload = socket.recv(byte_y+1, MSG_WAITALL)
+                        payload = recvall(socket, byte_y + 1)
                         if len(payload) != byte_y + 1:
                             return None
                         else:                        
@@ -97,12 +98,12 @@ def recv(socket):
         elif (byte_x >> 7 & 1) == 0: # Long Header Format            
             try:
                 msg_type = ( byte_x & 0b01110000 ) >> 4
-                byte_y = int.from_bytes(socket.recv(1,MSG_WAITALL),'big') # read byte_y which is the payload length - 1
+                byte_y = int.from_bytes(recvall(socket, 1), 'big') # read byte_y which is the payload length - 1
                 if byte_y == b'':
                         return None
                 else:
                     l_value = ((byte_x & 0b00001111) << 8) | byte_y
-                    payload = socket.recv(l_value+1, MSG_WAITALL)
+                    payload = recvall(socket, l_value + 1)
                     if len(payload) != l_value + 1:
                         return None
                     else:                    
