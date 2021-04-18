@@ -1,12 +1,15 @@
 import sys
 import socket
-from threading import Thread
+from threading import Thread, Lock
+import shutil
+import math
 
 
 SERVER_HOST = sys.argv[1]
 SERVER_PORT = int(sys.argv[2])
 SNIFFER_HOST = sys.argv[3]
 SNIFFER_PORT = int(sys.argv[4])
+output_lock = Lock()
 
 
 def sniffer_thread(thread_name, from_connection, to_connection):
@@ -14,17 +17,38 @@ def sniffer_thread(thread_name, from_connection, to_connection):
         try:
             data = from_connection.recv(65536)
         except:
-            print(f"{thread_name}: Error receiving data.")
+            with output_lock:
+                print(f"{thread_name}: Error receiving data.")
             return
         if len(data) == 0:
-            print(f"{thread_name}: Connection closed.")
+            with output_lock:
+                print(f"{thread_name}: Connection closed.")
             try:
                 to_connection.close()
             except:
                 pass
             return
         else:
-            print(f"{thread_name}: {repr(data)}")
+            with output_lock:
+                columns = shutil.get_terminal_size().columns
+                total_bytes = len(data)
+                print(f"{thread_name}: {total_bytes} {'byte' if total_bytes == 1 else 'bytes'}...")
+                print()
+                bytes_per_segment = (columns - 3) // 3
+                total_segments = math.ceil(len(data) / bytes_per_segment)
+                for segment_index in range(total_segments):
+                    hex_output = ["#"]
+                    chr_output = ["-"]
+                    for byte_offset in range(bytes_per_segment):
+                        byte_index = (segment_index * bytes_per_segment) + byte_offset
+                        if byte_index >= total_bytes:
+                            break
+                        byte_value = data[byte_index]
+                        hex_output.append(f"{byte_value:02X}")
+                        chr_output.append(f" {chr(byte_value)}" if 0x21 <= byte_value <= 0x7E else "  ")
+                    print(" ".join(hex_output))
+                    print(" ".join(chr_output))
+                print()
             try:
                 to_connection.sendall(data)
             except:
