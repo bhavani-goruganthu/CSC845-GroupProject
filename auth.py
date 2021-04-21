@@ -89,7 +89,7 @@ def insert_user(login, salt, hashed_password, con=None):
     user = get_user_info(login, con)
     if user is None:
         if not con:
-            con = sql.connect("users.db")
+            con = connection
         c = con.cursor()
         salt = sql.Binary(salt)
         hashed_password = sql.Binary(hashed_password)
