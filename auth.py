@@ -4,28 +4,34 @@ import string
 import random
 from secrets import token_bytes
 
+connection = sql.connect("users.db")
 
-def execute_users_statement(statement, fetchone=True):
-    con = sql.connect("users.db")
+
+def execute_users_statement(statement, con=None, fetchone=True, params=None):
+    if not con:
+        con = connection
     cur = con.cursor()
-    cur.execute(statement)
+    if params:
+        cur.execute(statement, params)
+    else:
+        cur.execute(statement)
     if fetchone:
         return cur.fetchone()
     else:
         return cur.fetchall()
 
 
-def get_table_schema():
+def get_table_schema(con=None):
     # [(0, 'login', 'TEXT', 0, None, 1), (1, 'salt', 'BLOB', 0, None, 0), (2, 'hash', 'BLOB', 0, None, 0)]
     statement = "PRAGMA table_info('users')"
-    schema = execute_users_statement(statement, fetchone=False)
+    schema = execute_users_statement(statement, con, fetchone=False)
     print(schema)
     return schema
 
 
-def view_users():
+def view_users(con=None):
     statement = "SELECT * FROM users"
-    records = execute_users_statement(statement, fetchone=False)
+    records = execute_users_statement(statement, con, fetchone=False)
     print(records)
     return records
 
@@ -33,24 +39,24 @@ def view_users():
 def salted_password_hashing(password, salt):
     encoded_password = password.encode()  # encode to bytes
     hash_obj = hashlib.sha256()
-    hash_obj.update(encoded_password)
     hash_obj.update(salt)
+    hash_obj.update(encoded_password)
     digest = hash_obj.digest()
     print(digest)
     return digest
 
 
-def get_user_info(login):
-    statement = f"SELECT salt, hash, rowid from users WHERE login='{login}';"
-    user = execute_users_statement(statement, fetchone=True)
+def get_user_info(login, con=None):
+    statement = f"SELECT salt, hash, rowid from users WHERE login= ?"
+    user = execute_users_statement(statement, con, fetchone=True, params=(login,))
     return user
 
 
-def check_user_credentials(login, password):
-    credentials = get_user_info(login)
+def check_user_credentials(login, password, con=None):
+    credentials = get_user_info(login, con)
     if not credentials:
         print("User name does not exit!")
-        register(login, password)
+        register(login, password, con)
         return 12
     else:
         user_input = salted_password_hashing(password, credentials[0])
@@ -62,27 +68,28 @@ def check_user_credentials(login, password):
             return 11
 
 
-def insert_random_user():
+def insert_random_user(con=None):
     letters = string.ascii_letters
     login = ''.join(random.choice(letters) for i in range(5))
     salt = token_bytes(16)
     password = ''.join(random.choice(letters) for i in range(10))
     hashed_password = salted_password_hashing(password, salt)
     print(f"Inserting random user login={login}, salt={salt}, password={password}, hashed_password={hashed_password}")
-    return insert_user(login, salt, hashed_password)
+    return insert_user(login, salt, hashed_password, con)
 
 
-def register(login, password):
+def register(login, password, con=None):
     salt = token_bytes(16)
     hashed_password = salted_password_hashing(password, salt)
     print(f"Register user login={login}, salt={salt}, password={password}, hashed_password={hashed_password}")
-    return insert_user(login, salt, hashed_password)
+    return insert_user(login, salt, hashed_password, con)
 
 
-def insert_user(login, salt, hashed_password):
-    user = get_user_info(login)
+def insert_user(login, salt, hashed_password, con=None):
+    user = get_user_info(login, con)
     if user is None:
-        con = sql.connect("users.db")
+        if not con:
+            con = connection
         c = con.cursor()
         salt = sql.Binary(salt)
         hashed_password = sql.Binary(hashed_password)
@@ -90,7 +97,6 @@ def insert_user(login, salt, hashed_password):
         row_id = c.lastrowid
         print(row_id)
         con.commit()
-        con.close()
         return row_id
     else:
         print('user exists')
