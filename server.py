@@ -97,7 +97,6 @@ try:
         # mark each client thread as daemon so that it exits when the main program exits
         client_thread_obj = Thread(target=client_thread, args=(connection, address),  daemon=True)
         client_thread_obj.start()
-        clients[connection]= address[1] # store the connection object and the address
         threadCount +=1
         print('Thread Number: ' + str(threadCount))
 except KeyboardInterrupt:
