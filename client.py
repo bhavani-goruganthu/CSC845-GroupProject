@@ -1,3 +1,4 @@
+import sys
 import socket  # used to send and receive data between endpoints
 import ssl # wrapper for socket objects - TLS encryption
 from threading import Thread
@@ -5,28 +6,33 @@ from chatui import ChatUI
 import m2proto
 from getpass import getpass
 
-# HOST = sys.argv[1]
-# PORT = int(sys.argv[2])
-HOST="localhost"
-PORT=9996
-server_sni_hostname = 'aspirants' # Common Name
-
-# create a SSLContext object
-context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile="newcerts/CA-cert.pem")
-context.load_cert_chain(certfile="newcerts/server-cert.pem", keyfile="newcerts/server-key.pem")
+HOST = "localhost"
+PORT = int(sys.argv[1])
+TLS = (sys.argv[-1] == "tls")
 
 # create a socket object
- # AF_INET similar to ipv4, SOCK_STREAM represents TCP
+# AF_INET similar to ipv4, SOCK_STREAM represents TCP
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-client = context.wrap_socket(client_socket, server_side=False, server_hostname=server_sni_hostname)
+if TLS:
+    server_sni_hostname = 'aspirants'  # Common Name
+
+    # create a SSLContext object
+    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile="newcerts/CA-cert.pem")
+    context.load_cert_chain(certfile="newcerts/server-cert.pem", keyfile="newcerts/server-key.pem")
+
+    client = context.wrap_socket(client_socket, server_side=False, server_hostname=server_sni_hostname)
+else:
+    client = client_socket
 
 # connect to the host and port the server socket is on
 client.connect((HOST, PORT))
 print("Connected to the Server Socket..!!")
-cert = client.getpeercert()
-print(cert)
+
+if TLS:
+    cert = client.getpeercert()
+    print(cert)
 
 def receive():
     response = m2proto.recv(client)
@@ -44,7 +50,6 @@ def receive():
 def login():
     while True:
         username = input("Username: ")
-        print(username)
         if not username:
             return False
         password = getpass("Password: ")
@@ -57,7 +62,6 @@ def login():
             print("Connection closed2.")
             return False
         response = m2proto.recv(client)
-        print("entered")
         if not response:
             print("Connection closed3.")
             return False
