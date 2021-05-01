@@ -47,3 +47,33 @@ Self-sign the certificate using your CA-cert.pem certificate. Enter the followin
 openssl x509 -req -days 365 -in signingReq.csr -CA CA-cert.pem -CAkey CA-key.pem -CAcreateserial -out server-cert.pem
 
 A server certificate is created and signed.
+
+
+To create and Sign a Client Certificate:
+Generate a new key:
+openssl genrsa -des3 -out client-key.pem 2048
+=> Enter pass phrase for client-key.pem: 12345
+
+Use the openssl.cnf file in the newcerts directory.
+
+Enter the following command (all in one line):
+openssl req -new -config openssl.cnf -key client-key.pem -out signingReq.csr
+
+Enter pass phrase for client-key.pem: 1234
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:California
+Locality Name (eg, city) []:San Francisco
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Team Aspirants Clients
+Organizational Unit Name (eg, section) []:Team Aspirants Clients
+Common Name (e.g. server FQDN or YOUR name) []:client
+Email Address []:
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:challenge
+An optional company name []:.
+
+Self-sign the certificate using your CA-cert.pem certificate. Enter the following command (all in one line):
+openssl x509 -req -days 365 -in signingReq.csr -CA CA-cert.pem -CAkey CA-key.pem -CAcreateserial -out client-cert.pem
+
+A client certificate is created and signed.
