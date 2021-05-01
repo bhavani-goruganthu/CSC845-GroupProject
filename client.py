@@ -19,7 +19,7 @@ if TLS:
     server_sni_hostname = 'aspirants'  # Common Name
 
     # create a SSLContext object
-    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile="newcerts/server-cert.pem")
+    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile="newcerts/ca-cert.pem")
     context.load_cert_chain(certfile="newcerts/client-cert.pem", keyfile="newcerts/client-key.pem")
 
     client = context.wrap_socket(client_socket, server_side=False, server_hostname=server_sni_hostname)
