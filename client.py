@@ -70,12 +70,12 @@ def send_file(fd):
         b = fd.read(4096)
         while b:
             with client_lock:
-                m2proto.send(client, 1, b)
+                m2proto.send(client, 4, b)
             b = fd.read(4096)
         m2proto.send(client, 18, b'')
 
 # TODO: 14+
-#     1 = file chunk
+#     4 = file chunk
 #    14 = file target/source username
 #    15 = file name
 #    16 = OK to send
