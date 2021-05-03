@@ -3,13 +3,11 @@ import hashlib
 import string
 import random
 from secrets import token_bytes
+from threading import Thread
+from queue import Queue
 
-connection = sql.connect("users.db")
 
-
-def execute_users_statement(statement, con=None, fetchone=True, params=None):
-    if not con:
-        con = connection
+def execute_users_statement(statement, con, fetchone=True, params=None):
     cur = con.cursor()
     if params:
         cur.execute(statement, params)
@@ -21,7 +19,7 @@ def execute_users_statement(statement, con=None, fetchone=True, params=None):
         return cur.fetchall()
 
 
-def get_table_schema(con=None):
+def get_table_schema(con):
     # [(0, 'login', 'TEXT', 0, None, 1), (1, 'salt', 'BLOB', 0, None, 0), (2, 'hash', 'BLOB', 0, None, 0)]
     statement = "PRAGMA table_info('users')"
     schema = execute_users_statement(statement, con, fetchone=False)
@@ -29,7 +27,7 @@ def get_table_schema(con=None):
     return schema
 
 
-def view_users(con=None):
+def view_users(con):
     statement = "SELECT * FROM users"
     records = execute_users_statement(statement, con, fetchone=False)
     print(records)
@@ -46,13 +44,13 @@ def salted_password_hashing(password, salt):
     return digest
 
 
-def get_user_info(login, con=None):
+def get_user_info(login, con):
     statement = f"SELECT salt, hash, rowid from users WHERE login= ?"
     user = execute_users_statement(statement, con, fetchone=True, params=(login,))
     return user
 
 
-def check_user_credentials(login, password, con=None):
+def check_user_credentials(login, password, con):
     credentials = get_user_info(login, con)
     if not credentials:
         print("User name does not exit!")
@@ -68,7 +66,7 @@ def check_user_credentials(login, password, con=None):
             return 11
 
 
-def insert_random_user(con=None):
+def insert_random_user(con):
     letters = string.ascii_letters
     login = ''.join(random.choice(letters) for i in range(5))
     salt = token_bytes(16)
@@ -78,18 +76,16 @@ def insert_random_user(con=None):
     return insert_user(login, salt, hashed_password, con)
 
 
-def register(login, password, con=None):
+def register(login, password, con):
     salt = token_bytes(16)
     hashed_password = salted_password_hashing(password, salt)
     print(f"Register user login={login}, salt={salt}, password={password}, hashed_password={hashed_password}")
     return insert_user(login, salt, hashed_password, con)
 
 
-def insert_user(login, salt, hashed_password, con=None):
+def insert_user(login, salt, hashed_password, con):
     user = get_user_info(login, con)
     if user is None:
-        if not con:
-            con = connection
         c = con.cursor()
         salt = sql.Binary(salt)
         hashed_password = sql.Binary(hashed_password)
@@ -102,3 +98,25 @@ def insert_user(login, salt, hashed_password, con=None):
         print('user exists')
         print(user)
         return user[2]
+
+
+def auth_thread(db_name, queue):
+    connection = sql.connect(db_name)
+    try:
+        while True:
+            login, password, result_queue = queue.get()
+            result_queue.put(check_user_credentials(login, password, connection))
+    finally:
+        connection.close()
+
+
+def start_auth_thread(db_name):
+    queue = Queue()
+    Thread(target=auth_thread, daemon=True, args=(db_name, queue)).start()
+    return queue
+
+
+def check_user_credentials_in_auth_thread(queue, login, password):
+    result_queue = Queue()
+    queue.put((login, password, result_queue))
+    return result_queue.get()

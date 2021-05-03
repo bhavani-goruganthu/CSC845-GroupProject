@@ -5,10 +5,10 @@ import shutil
 import math
 
 
-SERVER_HOST = sys.argv[1]
-SERVER_PORT = int(sys.argv[2])
-SNIFFER_HOST = sys.argv[3]
-SNIFFER_PORT = int(sys.argv[4])
+SERVER_HOST = "localhost"
+SERVER_PORT = int(sys.argv[1])
+CLIENT_HOST = "localhost"
+CLIENT_PORT = int(sys.argv[2])
 output_lock = Lock()
 
 
@@ -63,7 +63,7 @@ def sniffer_thread(thread_name, from_connection, to_connection):
 sniffer_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sniffer_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-sniffer_socket.bind((SNIFFER_HOST, SNIFFER_PORT))
+sniffer_socket.bind((CLIENT_HOST, CLIENT_PORT))
 sniffer_socket.listen(5)
 
 client_count = 0

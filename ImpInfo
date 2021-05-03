@@ -1,0 +1,49 @@
+md \newcerts
+cd C:\newcerts
+
+Generate a CA private key:
+> openssl genrsa -des3 -out CA-key.pem 2048
+
+=> Enter pass phrase for CA-key.pem: 1234
+
+Generate the root CA certificate.
+> openssl req -new -key CA-key.pem -x509 -days 1000 -out CA-cert.pem
+
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:California
+Locality Name (eg, city) []:San Francisco
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:San Francisco State University
+Organizational Unit Name (eg, section) []:Team Aspirants
+Common Name (e.g. server FQDN or YOUR name) []:aspirants
+Email Address []:bgoruganthu@mail.sfsu.edu
+
+To create a Signing a Server Certificate:
+Generate a new key:
+openssl genrsa -des3 -out server-key.pem 2048
+=> Enter pass phrase for server-key.pem: 1234
+
+Generate a certificate signing request:
+Locate the openssl.cnf file is in your OpenSSL installation directory.
+Copy the openssl.cnf file to the newcerts directory. You may need to modify some of the configuration settings in this file.
+
+Enter the following command (all in one line):
+openssl req –new –config openssl.cnf –key server-key.pem –out signingReq.csr
+
+Enter pass phrase for server-key.pem: 1234
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:California
+Locality Name (eg, city) []:San Francisco
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Team Aspirants
+Organizational Unit Name (eg, section) []:Team Aspirants
+Common Name (e.g. server FQDN or YOUR name) []:aspirants
+Email Address []:bgoruganthu@mail.sfsu.edu
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:abcdef
+An optional company name []:.
+
+Self-sign the certificate using your CA-cert.pem certificate. Enter the following command (all in one line):
+openssl x509 -req -days 365 -in signingReq.csr -CA CA-cert.pem -CAkey CA-key.pem -CAcreateserial -out server-cert.pem
+
+A server certificate is created and signed.
