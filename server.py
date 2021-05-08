@@ -51,11 +51,11 @@ def receive_login(connection):
 
         result = check_user_credentials_in_auth_thread(auth_queue, username_msg[1], password_msg[1])
         if result == 10 or result == 12:
-            m2proto.send(connection, result, "")
+            m2proto.send(connection, result)
             print(username_msg[1])
             return username_msg[1]
         else:
-            m2proto.send(connection, 11, "")
+            m2proto.send(connection, 11)
 
 
 def client_thread(connection, address):

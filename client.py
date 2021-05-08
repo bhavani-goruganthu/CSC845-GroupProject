@@ -41,14 +41,37 @@ client_lock = Lock()
 def receive():
     global file_to_send
     prefix = None
+    file_sender = None
+    file_to_receive = None
     response = m2proto.recv(client)
-    while response is not None: # receive and print responses from the server (can be many)
+    while response is not None:  # receive and print responses from the server (can be many)
         (msg_type, payload) = response
         if msg_type == 13:
             prefix = payload
         elif msg_type == 0:
             ui.add_output(prefix, payload)
             prefix = None
+        elif msg_type == 14:
+            file_sender = payload
+        elif msg_type == 15:
+            incoming_filename = payload
+            try:
+                file_to_receive = open(incoming_filename, "xb")
+            except:  # likely either FileExistsError or PermissionError, but we don't really care
+                ui.add_output(None, "Unable to receive file from " + file_sender + ": " + incoming_filename)
+                file_sender = None
+                file_to_receive = None
+                with client_lock:
+                    m2proto.send(client, 4, 17)
+            else:
+                with client_lock:
+                    m2proto.send(client, 4, 16)
+                ui.add_output(None, "Receiving file from " + file_sender + ": " + incoming_filename)
+        elif msg_type == 4:
+            file_to_receive.write(payload)
+        elif msg_type == 18:
+            file_to_receive.close()
+            ui.add_output(None, "Finished receiving file.")
         elif msg_type == 16:
             ui.add_output(None, "Sending file...")
             with client_lock:
@@ -72,7 +95,9 @@ def send_file(fd):
             with client_lock:
                 m2proto.send(client, 4, b)
             b = fd.read(4096)
-        m2proto.send(client, 18, b'')
+        m2proto.send(client, 18)
+    ui.add_output(None, "Finished sending file.")
+
 
 # TODO: 14+
 #     4 = file chunk
@@ -81,18 +106,13 @@ def send_file(fd):
 #    16 = OK to send
 #    17 = not OK to send
 #    18 = file complete
-# TODO: need binary support in m2proto
-# TODO: start sending
 # TODO: OK to send (from server)
 # TODO: Not OK to send (from server)
 # TODO: on server, close connection if chunk is received when shouldn't be
-# TODO: continue sending
-# TODO: receive/save
 # TODO: progress updates
 # TODO: make sure chat messages can send at same time (to test, add delay between chunks)
 # TODO: when testing/demoing, make sure each client is run from its own directory
-# TODO: when receiving, refuse if file already exists; maybe ack should go all the way to receiver and back
-#       -> open with mode "xb" and catch FileExistsError
+
 
 def login():
     while True:
