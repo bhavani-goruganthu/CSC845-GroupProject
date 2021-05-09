@@ -99,16 +99,6 @@ def send_file(fd):
     ui.add_output(None, "Finished sending file.")
 
 
-# TODO: 14+
-#     4 = file chunk
-#    14 = file target/source username
-#    15 = file name
-#    16 = OK to send
-#    17 = not OK to send
-#    18 = file complete
-# TODO: OK to send (from server)
-# TODO: Not OK to send (from server)
-# TODO: on server, close connection if chunk is received when shouldn't be
 # TODO: progress updates
 # TODO: make sure chat messages can send at same time (to test, add delay between chunks)
 # TODO: when testing/demoing, make sure each client is run from its own directory

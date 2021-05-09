@@ -58,28 +58,43 @@ def receive_login(connection):
             m2proto.send(connection, 11)
 
 
-def client_thread(connection, address):
+def client_thread(connection, address, threadNumber):
     try:
         username = receive_login(connection)
         if username is not None:
             with clients_lock:
-                clients[connection] = address[1]  # store the connection object and the address
+                clients[threadNumber] = (connection, username)
             while True:
                 data = m2proto.recv(connection)
                 if data is not None:
-                    (msg_type , payload) = data
-                    print(f"From connected Client {address}): " + str(payload))
-                    with clients_lock:
-                        # broadcast msg to all clients
-                        for single_client in clients:
-                            m2proto.send(single_client, 13, username)
-                            m2proto.send(single_client, 0, payload)
+                    (msg_type, payload) = data
+                    if msg_type == 0:
+                        print(f"From connected Client {address}): " + str(payload))
+                        with clients_lock:
+                            # broadcast msg to all clients
+                            for target_connection, target_username in clients.values():
+                                m2proto.send(target_connection, 13, username)
+                                m2proto.send(target_connection, 0, payload)
+                    elif msg_type == 14:
+                        pass  # TODO: 14 = target username (from client) => find target connection and save in variable
+                    elif msg_type == 15:
+                        pass  # TODO: 15 = filename => send username/filename to first client with target username
+                        # TODO: or send NOT OK if no such username
+                    elif msg_type == 16:
+                        pass  # TODO: 16 = OK => send OK to whoever wants to start sending
+                    elif msg_type == 17:
+                        pass  # TODO: 17 = not OK => send not OK to whoever wants to start sending
+                    elif msg_type == 18:
+                        pass  # TODO: 18 = EOF => send EOF to receiver
+                    elif msg_type == 4:
+                        pass  # TODO: 4 = chunk => send chunk to receiver
+                        # TODO: ignore or close connection if not in right state?
                 else:
                     break
     finally:
         with clients_lock:
             try:
-                del clients[connection]
+                del clients[threadNumber]
                 connection.shutdown(socket.SHUT_RDWR)
                 connection.close()
             except:
@@ -99,9 +114,9 @@ try:
             connection = conn
 
         # mark each client thread as daemon so that it exits when the main program exits
-        client_thread_obj = Thread(target=client_thread, args=(connection, address),  daemon=True)
-        client_thread_obj.start()
         threadCount +=1
+        client_thread_obj = Thread(target=client_thread, args=(connection, address, threadCount),  daemon=True)
+        client_thread_obj.start()
         print('Thread Number: ' + str(threadCount))
 except KeyboardInterrupt:
     sys.exit()
