@@ -1,6 +1,7 @@
 md \newcerts
 cd C:\newcerts
 
+/**************** CA CERTS *******************/
 Generate a CA private key:
 > openssl genrsa -des3 -out CA-key.pem 2048
 
@@ -14,8 +15,10 @@ State or Province Name (full name) [Some-State]:California
 Locality Name (eg, city) []:San Francisco
 Organization Name (eg, company) [Internet Widgits Pty Ltd]:San Francisco State University
 Organizational Unit Name (eg, section) []:Team Aspirants
-Common Name (e.g. server FQDN or YOUR name) []:aspirants
+Common Name (e.g. server FQDN or YOUR name) []:aspiranta
 Email Address []:bgoruganthu@mail.sfsu.edu
+
+/**************** SERVER CERTS *******************/
 
 To create a Signing a Server Certificate:
 Generate a new key:
@@ -47,3 +50,102 @@ Self-sign the certificate using your CA-cert.pem certificate. Enter the followin
 openssl x509 -req -days 365 -in signingReq.csr -CA CA-cert.pem -CAkey CA-key.pem -CAcreateserial -out server-cert.pem
 
 A server certificate is created and signed.
+
+/**************** CLIENT CERTS *******************/
+
+To create and Sign a Client Certificate:
+Generate a new key:
+openssl genrsa -des3 -out client-key.pem 2048
+=> Enter pass phrase for client-key.pem: 12345
+
+Use the openssl.cnf file in the newcerts directory.
+
+Enter the following command (all in one line):
+openssl req -new -config openssl.cnf -key client-key.pem -out signingReq.csr
+
+Enter pass phrase for client-key.pem: 12345
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:California
+Locality Name (eg, city) []:San Francisco
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Team Aspirants Clients
+Organizational Unit Name (eg, section) []:Team Aspirants Clients
+Common Name (e.g. server FQDN or YOUR name) []:client
+Email Address []:
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:challenge
+An optional company name []:.
+
+Self-sign the certificate using your CA-cert.pem certificate. Enter the following command (all in one line):
+openssl x509 -req -days 365 -in signingReq.csr -CA CA-cert.pem -CAkey CA-key.pem -CAcreateserial -out client-cert.pem
+Enter pass phrase for CA-key.pem:1234
+
+A client certificate is created and signed.
+
+/**************** USER CERTS *******************/
+/****** JOHN ******/
+To create and Sign john's Certificate:
+Generate a new key:
+openssl genrsa -des3 -out john-key.pem 2048
+=> Enter pass phrase for john-key.pem: 12345
+
+Use the openssl.cnf file in the newcerts directory.
+
+Enter the following command (all in one line):
+openssl req -new -config openssl.cnf -key john-key.pem -out signingReq.csr
+
+Enter pass phrase for john-key.pem: 12345
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:California
+Locality Name (eg, city) []:San Francisco
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Team Aspirants john
+Organizational Unit Name (eg, section) []:Team Aspirants john
+Common Name (e.g. server FQDN or YOUR name) []:john
+Email Address []:
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:challenge
+An optional company name []:.
+
+Self-sign the certificate using your CA-cert.pem certificate. Enter the following command (all in one line):
+openssl x509 -req -days 365 -in signingReq.csr -CA CA-cert.pem -CAkey CA-key.pem -CAcreateserial -out john-cert.pem
+Enter pass phrase for CA-key.pem:1234
+
+john's certificate is created and signed.
+
+/****** KELLY ******/
+
+To create and Sign kelly's Certificate:
+Generate a new key:
+openssl genrsa -des3 -out kelly-key.pem 2048
+=> Enter pass phrase for kelly-key.pem: 12345
+
+Use the openssl.cnf file in the newcerts directory.
+
+Enter the following command (all in one line):
+openssl req -new -config openssl.cnf -key kelly-key.pem -out signingReq.csr
+
+Enter pass phrase for kelly-key.pem: 12345
+Country Name (2 letter code) [AU]:US
+State or Province Name (full name) [Some-State]:California
+Locality Name (eg, city) []:San Francisco
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Team Aspirants kelly
+Organizational Unit Name (eg, section) []:Team Aspirants kelly
+Common Name (e.g. server FQDN or YOUR name) []:kelly
+Email Address []:
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:challenge
+An optional company name []:.
+
+Self-sign the certificate using your CA-cert.pem certificate. Enter the following command (all in one line):
+openssl x509 -req -days 365 -in signingReq.csr -CA CA-cert.pem -CAkey CA-key.pem -CAcreateserial -out kelly-cert.pem
+    Signature ok
+    subject=C = US, ST = California, L = San Francisco, O = Team Aspirants kelly, OU = Team Aspirants kelly, CN = kelly
+    Getting CA Private Key
+    Enter pass phrase for CA-key.pem:1234
+
+kelly's certificate is created and signed.

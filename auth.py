@@ -53,7 +53,7 @@ def get_user_info(login, con):
 def check_user_credentials(login, password, con):
     credentials = get_user_info(login, con)
     if not credentials:
-        print("User name does not exit!")
+        print("User name does not exist!")
         register(login, password, con)
         return 12
     else:

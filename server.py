@@ -40,11 +40,23 @@ server.listen(5) # listen to connections
 auth_queue = start_auth_thread("users.db")
 
 
-def receive_login(connection):
+def receive_login(connection, client_commonName):
     while True:
-        username_msg = m2proto.recv(connection)
-        if not username_msg or username_msg[0] != 8:
-            return None
+        if client_commonName:
+            print(client_commonName)            
+            username_msg = m2proto.recv(connection)
+            if not username_msg or username_msg[0] != 8:
+                return None
+            print(username_msg[1])
+            if(username_msg[1] != client_commonName):
+                return None
+            else:
+                print("Client's username is verified against certificate's common name..!!")
+        else:
+            username_msg = m2proto.recv(connection)
+            if not username_msg or username_msg[0] != 8:
+                return None        
+
         password_msg = m2proto.recv(connection)
         if not password_msg or password_msg[0] != 9:
             return None
@@ -58,9 +70,13 @@ def receive_login(connection):
             m2proto.send(connection, 11, "")
 
 
-def client_thread(connection, address):
-    try:
-        username = receive_login(connection)
+def client_thread(connection, address, client_commonName):
+    try:        
+        if not client_commonName:            
+            username = receive_login(connection, '')
+        else:
+            print("Client's commonName : " + client_commonName)
+            username = receive_login(connection, client_commonName)
         if username is not None:
             with clients_lock:
                 clients[connection] = address[1]  # store the connection object and the address
@@ -95,11 +111,15 @@ try:
         if TLS:
             connection = context.wrap_socket(conn, server_side=True)
             print("TLS established")
+            cert = connection.getpeercert()
+            subject = dict(x[0] for x in cert['subject'])
+            client_commonName = subject['commonName']
         else:
             connection = conn
+            client_commonName = ""
 
         # mark each client thread as daemon so that it exits when the main program exits
-        client_thread_obj = Thread(target=client_thread, args=(connection, address),  daemon=True)
+        client_thread_obj = Thread(target=client_thread, args=(connection, address, client_commonName),  daemon=True)
         client_thread_obj.start()
         threadCount +=1
         print('Thread Number: ' + str(threadCount))
