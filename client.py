@@ -14,25 +14,35 @@ TLS = (sys.argv[-1] == "tls")
 # AF_INET similar to ipv4, SOCK_STREAM represents TCP
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+username = input("Username: ")
 
-if TLS:
+if TLS:    
+    client_cert = "newcerts/{}-cert.pem".format(username)    
+    client_key = 'newcerts/{}-key.pem'.format(username)
+    print("Certificates used for {} are:".format(username))
+    print(client_cert)
+    print(client_key)
+    ca_cert = 'newcerts/ca-cert.pem'
+    
     server_sni_hostname = 'aspirants'  # Common Name
-
     # create a SSLContext object
-    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile="newcerts/ca-cert.pem")
-    context.load_cert_chain(certfile="newcerts/client-cert.pem", keyfile="newcerts/client-key.pem")
-
-    client = context.wrap_socket(client_socket, server_side=False, server_hostname=server_sni_hostname)
+    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=ca_cert)
+    try:
+        context.load_cert_chain(certfile=client_cert, keyfile=client_key)
+        client = context.wrap_socket(client_socket, server_side=False, server_hostname=server_sni_hostname)
+        print("TLS established")
+    except:
+        print("Invalid/No certificates for entered Username")
+        client.shutdown(socket.SHUT_RDWR)
+        client.close()
+        sys.exit()
 else:
     client = client_socket
 
 # connect to the host and port the server socket is on
 client.connect((HOST, PORT))
 print("Connected to the Server Socket..!!")
-
-if TLS:
-    cert = client.getpeercert()
-    print(cert)
+    
 
 def receive():
     response = m2proto.recv(client)
@@ -47,16 +57,17 @@ def receive():
     ui.send_exit_signals()
 
 
-def login():
+def login(username):
     while True:
-        username = input("Username: ")
+        # username = input("Username: ")
+        print(username)
         if not username:
-            return False
-        password = getpass("Password: ")
-        if not password:
             return False
         if not m2proto.send(client, 8, username):
             print("Connection closed1.")
+            return False
+        password = getpass("Password: ")
+        if not password:
             return False
         if not m2proto.send(client, 9, password):
             print("Connection closed2.")
@@ -79,7 +90,7 @@ def login():
 
 
 try:
-    if login():
+    if login(username):
         with ChatUI() as ui:
             receive_thread = Thread(target=receive, daemon=True)
             receive_thread.start() # start the receive thread
