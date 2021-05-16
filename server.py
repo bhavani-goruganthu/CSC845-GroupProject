@@ -31,6 +31,8 @@ print('Socket Created')
 threadCount = 0 # keep a count of no. of clients
 clients = {} # to store list of clients
 clients_lock = Lock()
+file_transfer_source_connection = None
+file_transfer_target_connection = None
 
 # bind to the host & port passed in the commandline
 server.bind((HOST,PORT))
@@ -59,6 +61,7 @@ def receive_login(connection):
 
 
 def client_thread(connection, address, threadNumber):
+    global file_transfer_source_connection, file_transfer_target_connection
     try:
         username = receive_login(connection)
         if username is not None:
@@ -76,19 +79,41 @@ def client_thread(connection, address, threadNumber):
                                 m2proto.send(target_connection, 13, username)
                                 m2proto.send(target_connection, 0, payload)
                     elif msg_type == 14:
-                        pass  # TODO: 14 = target username (from client) => find target connection and save in variable
+                        with clients_lock:
+                            if file_transfer_source_connection is None:
+                                file_transfer_source_connection = connection
+                                file_transfer_target_connection = None
+                                for target_connection, target_username in clients.values():
+                                    if payload == target_username:
+                                        file_transfer_target_connection = target_connection
+                                        break
                     elif msg_type == 15:
-                        pass  # TODO: 15 = filename => send username/filename to first client with target username
-                        # TODO: or send NOT OK if no such username
+                        with clients_lock:
+                            if file_transfer_source_connection != connection or file_transfer_target_connection is None:
+                                m2proto.send(connection, 17)
+                            else:
+                                m2proto.send(file_transfer_target_connection, 14, username)
+                                m2proto.send(file_transfer_target_connection, 15, payload)
                     elif msg_type == 16:
-                        pass  # TODO: 16 = OK => send OK to whoever wants to start sending
+                        with clients_lock:
+                            if file_transfer_target_connection == connection:
+                                m2proto.send(file_transfer_source_connection, 16)
                     elif msg_type == 17:
-                        pass  # TODO: 17 = not OK => send not OK to whoever wants to start sending
+                        with clients_lock:
+                            if file_transfer_target_connection == connection:
+                                m2proto.send(file_transfer_source_connection, 17)
+                                file_transfer_source_connection = None
+                                file_transfer_target_connection = None
                     elif msg_type == 18:
-                        pass  # TODO: 18 = EOF => send EOF to receiver
+                        with clients_lock:
+                            if file_transfer_source_connection == connection:
+                                m2proto.send(file_transfer_target_connection, 18)
+                                file_transfer_source_connection = None
+                                file_transfer_target_connection = None
                     elif msg_type == 4:
-                        pass  # TODO: 4 = chunk => send chunk to receiver
-                        # TODO: ignore or close connection if not in right state?
+                        with clients_lock:
+                            if file_transfer_source_connection == connection:
+                                m2proto.send(file_transfer_target_connection, 4, payload)
                 else:
                     break
     finally:

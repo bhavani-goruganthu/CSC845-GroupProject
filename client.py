@@ -5,6 +5,7 @@ from threading import Thread, Lock
 from chatui import ChatUI
 import m2proto
 from getpass import getpass
+import time
 
 HOST = "localhost"
 PORT = int(sys.argv[1])
@@ -92,16 +93,12 @@ def send_file(fd):
     with fd:
         b = fd.read(4096)
         while b:
+            time.sleep(0.5)  # just to simulate slow file transfer
             with client_lock:
                 m2proto.send(client, 4, b)
             b = fd.read(4096)
         m2proto.send(client, 18)
     ui.add_output(None, "Finished sending file.")
-
-
-# TODO: progress updates
-# TODO: make sure chat messages can send at same time (to test, add delay between chunks)
-# TODO: when testing/demoing, make sure each client is run from its own directory
 
 
 def login():
