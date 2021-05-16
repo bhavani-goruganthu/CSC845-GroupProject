@@ -63,10 +63,10 @@ def receive():
                 file_sender = None
                 file_to_receive = None
                 with client_lock:
-                    m2proto.send(client, 4, 17)
+                    m2proto.send(client, 17)
             else:
                 with client_lock:
-                    m2proto.send(client, 4, 16)
+                    m2proto.send(client, 16)
                 ui.add_output(None, "Receiving file from " + file_sender + ": " + incoming_filename)
         elif msg_type == 4:
             file_to_receive.write(payload)
@@ -93,7 +93,7 @@ def send_file(fd):
     with fd:
         b = fd.read(4096)
         while b:
-            time.sleep(0.5)  # just to simulate slow file transfer
+            time.sleep(1.0)  # just to simulate slow file transfer
             with client_lock:
                 m2proto.send(client, 4, b)
             b = fd.read(4096)

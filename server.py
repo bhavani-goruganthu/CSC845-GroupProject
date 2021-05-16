@@ -87,6 +87,8 @@ def client_thread(connection, address, threadNumber):
                                     if payload == target_username:
                                         file_transfer_target_connection = target_connection
                                         break
+                                if file_transfer_target_connection is None:
+                                    file_transfer_source_connection = None
                     elif msg_type == 15:
                         with clients_lock:
                             if file_transfer_source_connection != connection or file_transfer_target_connection is None:
