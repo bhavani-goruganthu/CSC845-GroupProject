@@ -105,7 +105,7 @@ class M2ProtocolTests(TestCase):
         self.__test_recv(b'\x97\x02abc', 23, 'abc')
 
     def test_recv_long_other_type(self):
-        self.__test_recv(b'\x51\x00' + (b'x' * 257), 5, 'x' * 257)
+        self.__test_recv(b'\x51\x00' + (b'x' * 257), 5, b'x' * 257)
 
     def test_recv_unicode_long(self):
         self.__test_recv(b'\x31\x8F' + (b'\xC2\xA0' * 200), 3, '\xA0' * 200)

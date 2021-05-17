@@ -56,7 +56,6 @@ class ChatUI:
                 return
 
     def __output_thread(self):
-        prefix = "*"
         last_line = ""
         cursor = False
         while True:
@@ -66,12 +65,11 @@ class ChatUI:
             if op == 'input':
                 last_line = command[1]
             elif op == 'output':
-                line = command[1]
+                prefix = (command[1] + " *" if command[1] else "!")
+                line = command[2]
                 self.io.write("\r" + self.__format_output(prefix, line) + "\n")
             elif op == 'cursor':
                 cursor = command[1]
-            elif op == 'prefix':
-                prefix = command[1]
             else:
                 self.io.write("\r" + self.__format_input(last_line, False) + "\r\n")
                 self.exited.set()
@@ -100,13 +98,9 @@ class ChatUI:
         """Read one line of input from the user. Returns None if the user exits."""
         return None if self.is_exiting() else self.input_queue.get(block, timeout)
 
-    def add_output(self, line):
+    def add_output(self, prefix, line):
         """Displays one line of output to the user."""
-        self.output_queue.put(('output', line))
-
-    def set_prefix(self, prefix):
-        """Sets the prefix for messages, such as a username."""
-        self.output_queue.put(('prefix', prefix + " *" if prefix else "*"))
+        self.output_queue.put(('output', prefix, line))
 
     def is_exiting(self):
         """Returns True or False depending on whether the user has exited

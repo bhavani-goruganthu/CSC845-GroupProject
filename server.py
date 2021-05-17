@@ -31,6 +31,8 @@ print('Socket Created')
 threadCount = 0 # keep a count of no. of clients
 clients = {} # to store list of clients
 clients_lock = Lock()
+file_transfer_source_connection = None
+file_transfer_target_connection = None
 
 # bind to the host & port passed in the commandline
 server.bind((HOST,PORT))
@@ -43,7 +45,7 @@ auth_queue = start_auth_thread("users.db")
 def receive_login(connection, client_commonName):
     while True:
         if client_commonName:
-            print(client_commonName)            
+            print(client_commonName)
             username_msg = m2proto.recv(connection)
             if not username_msg or username_msg[0] != 8:
                 return None
@@ -55,7 +57,7 @@ def receive_login(connection, client_commonName):
         else:
             username_msg = m2proto.recv(connection)
             if not username_msg or username_msg[0] != 8:
-                return None        
+                return None
 
         password_msg = m2proto.recv(connection)
         if not password_msg or password_msg[0] != 9:
@@ -63,39 +65,79 @@ def receive_login(connection, client_commonName):
 
         result = check_user_credentials_in_auth_thread(auth_queue, username_msg[1], password_msg[1])
         if result == 10 or result == 12:
-            m2proto.send(connection, result, "")
+            m2proto.send(connection, result)
             print(username_msg[1])
             return username_msg[1]
         else:
-            m2proto.send(connection, 11, "")
+            m2proto.send(connection, 11)
 
 
-def client_thread(connection, address, client_commonName):
-    try:        
-        if not client_commonName:            
+def client_thread(connection, address, threadNumber, client_commonName):
+    global file_transfer_source_connection, file_transfer_target_connection
+    try:
+        if not client_commonName:
             username = receive_login(connection, '')
         else:
             print("Client's commonName : " + client_commonName)
             username = receive_login(connection, client_commonName)
         if username is not None:
             with clients_lock:
-                clients[connection] = address[1]  # store the connection object and the address
+                clients[threadNumber] = (connection, username)
             while True:
                 data = m2proto.recv(connection)
                 if data is not None:
-                    (msg_type , payload) = data
-                    print(f"From connected Client {address}): " + str(payload))
-                    with clients_lock:
-                        # broadcast msg to all clients
-                        for single_client in clients:
-                            m2proto.send(single_client, 13, username)
-                            m2proto.send(single_client, 0, payload)
+                    (msg_type, payload) = data
+                    if msg_type == 0:
+                        print(f"From connected Client {address}): " + str(payload))
+                        with clients_lock:
+                            # broadcast msg to all clients
+                            for target_connection, target_username in clients.values():
+                                m2proto.send(target_connection, 13, username)
+                                m2proto.send(target_connection, 0, payload)
+                    elif msg_type == 14:
+                        with clients_lock:
+                            if file_transfer_source_connection is None:
+                                file_transfer_source_connection = connection
+                                file_transfer_target_connection = None
+                                for target_connection, target_username in clients.values():
+                                    if payload == target_username:
+                                        file_transfer_target_connection = target_connection
+                                        break
+                                if file_transfer_target_connection is None:
+                                    file_transfer_source_connection = None
+                    elif msg_type == 15:
+                        with clients_lock:
+                            if file_transfer_source_connection != connection or file_transfer_target_connection is None:
+                                m2proto.send(connection, 17)
+                            else:
+                                m2proto.send(file_transfer_target_connection, 14, username)
+                                m2proto.send(file_transfer_target_connection, 15, payload)
+                    elif msg_type == 16:
+                        with clients_lock:
+                            if file_transfer_target_connection == connection:
+                                m2proto.send(file_transfer_source_connection, 16)
+                    elif msg_type == 17:
+                        with clients_lock:
+                            if file_transfer_target_connection == connection:
+                                m2proto.send(file_transfer_source_connection, 17)
+                                file_transfer_source_connection = None
+                                file_transfer_target_connection = None
+                    elif msg_type == 18:
+                        with clients_lock:
+                            if file_transfer_source_connection == connection:
+                                m2proto.send(file_transfer_target_connection, 18)
+                                file_transfer_source_connection = None
+                                file_transfer_target_connection = None
+                    elif msg_type == 4:
+                        with clients_lock:
+                            if file_transfer_source_connection == connection:
+                                m2proto.send(file_transfer_target_connection, 4, payload)
                 else:
                     break
     finally:
         with clients_lock:
             try:
-                del clients[connection]
+                del clients[threadNumber]
                 connection.shutdown(socket.SHUT_RDWR)
                 connection.close()
             except:
@@ -119,9 +161,9 @@ try:
             client_commonName = ""
 
         # mark each client thread as daemon so that it exits when the main program exits
-        client_thread_obj = Thread(target=client_thread, args=(connection, address, client_commonName),  daemon=True)
-        client_thread_obj.start()
         threadCount +=1
+        client_thread_obj = Thread(target=client_thread, args=(connection, address, threadCount, client_commonName),  daemon=True)
+        client_thread_obj.start()
         print('Thread Number: ' + str(threadCount))
 except KeyboardInterrupt:
     sys.exit()

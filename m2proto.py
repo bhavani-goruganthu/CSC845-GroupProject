@@ -1,22 +1,40 @@
 from recvall import recvall
 
+
 class PayloadTooBig(Exception):
     """Exception raised when attempting to send a payload that is too large for
     the protocol to handle for the provided message type."""
     pass
+
 
 class InvalidType(Exception):
     """Exception raised when attempting to send a message with an invalid type
     (outside the range 0 to 63, inclusive)."""
     pass
 
-def send(socket, msg_type, payload):
+
+class InvalidPayload(Exception):
+    """Exception raised when attempting to send a message with a payload that is
+    not allowed for the message type."""
+    pass
+
+
+def send(socket, msg_type, payload=None):
     """Send a message to the socket, given the message type as an integer
     value and the payload as a character string. Returns True if the
     message is sent successfully and False if the socket has been closed.
     Raises InvalidType if type is outside the range 0 to 63, inclusive.
-    Raises PayloadTooBig is the payload is too big for the message type."""
-    enc_msg = payload.encode('utf-8')
+    Raises PayloadTooBig if the payload is too big for the message type.
+    Raises InvalidPayload if the payload cannot be encoded appropriately
+    for the given message type."""
+    if not payload:
+        enc_msg = b''
+    elif isinstance(payload, str):
+        enc_msg = payload.encode()
+    elif isinstance(payload, bytes) and 4 <= msg_type <= 7:
+        enc_msg = payload
+    else:
+        raise InvalidPayload
     len_encmsg = len(enc_msg)
     l_value = len_encmsg - 1
     if len_encmsg == 0: # Empty Header Format
@@ -69,6 +87,7 @@ def send(socket, msg_type, payload):
     elif len_encmsg > 4096: # Invalid Payload Size
         raise PayloadTooBig
 
+
 def recv(socket):
     """Receive a message from the socket. Returns a pair containing the
     message type as an integer value and the payload as a character
@@ -78,39 +97,31 @@ def recv(socket):
         if byte_x == b'':
             return None
         elif (byte_x >> 7 & 1) == 1:
-            if (byte_x >> 6 & 1) == 1: # Empty Header Format
+            if (byte_x >> 6 & 1) == 1:  # Empty Header Format
                 msg_type = byte_x & 0b00111111
-                return (msg_type,'')
-            elif (byte_x >> 6 & 0) == 0: # Short Header Format
+                payload = b''
+            else: # Short Header Format
                 msg_type = byte_x & 0b00111111
-                try:
-                    byte_y = int.from_bytes(recvall(socket, 1), 'big') # read byte_y which is the payload length - 1
-                    if byte_y == b'':
-                        return None
-                    else:
-                        payload = recvall(socket, byte_y + 1)
-                        if len(payload) != byte_y + 1:
-                            return None
-                        else:                        
-                            return (msg_type, payload.decode('utf-8'))
-                except:
-                    return None
-        elif (byte_x >> 7 & 1) == 0: # Long Header Format            
-            try:
-                msg_type = ( byte_x & 0b01110000 ) >> 4
-                byte_y = int.from_bytes(recvall(socket, 1), 'big') # read byte_y which is the payload length - 1
+                byte_y = int.from_bytes(recvall(socket, 1), 'big')  # read byte_y which is the payload length - 1
                 if byte_y == b'':
-                        return None
+                    return None
                 else:
-                    l_value = ((byte_x & 0b00001111) << 8) | byte_y
-                    payload = recvall(socket, l_value + 1)
-                    if len(payload) != l_value + 1:
+                    payload = recvall(socket, byte_y + 1)
+                    if len(payload) != byte_y + 1:
                         return None
-                    else:                    
-                        return (msg_type, payload.decode('utf-8'))
-            except:
+        else:  # Long Header Format
+            msg_type = (byte_x & 0b01110000) >> 4
+            byte_y = int.from_bytes(recvall(socket, 1), 'big')  # read byte_y which is the payload length - 1
+            if byte_y == b'':
                 return None
+            else:
+                l_value = ((byte_x & 0b00001111) << 8) | byte_y
+                payload = recvall(socket, l_value + 1)
+                if len(payload) != l_value + 1:
+                    return None
+        if 4 <= msg_type <= 7:
+            return msg_type, payload
         else:
-            return None        
+            return msg_type, payload.decode()
     except:
         return None
